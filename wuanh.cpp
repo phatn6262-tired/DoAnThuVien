@@ -77,10 +77,10 @@ struct DS_TheDocGia{
 	TheDocGia data;
 	DS_TheDocGia *left, *right;
 };
-typedef DS_TheDocGia *TREE_TheDocGia;
+typedef DS_TheDocGia *PTR_TheDocGia;
 
 // cay the doc gia
-TREE_TheDocGia SearchDocGia(TREE_TheDocGia root, int MaThe){
+PTR_TheDocGia SearchDocGia(PTR_TheDocGia root, int MaThe){
 	if (root== nullptr || root ->data.MaThe== MaThe){
 		return root;
 	}
@@ -90,7 +90,7 @@ TREE_TheDocGia SearchDocGia(TREE_TheDocGia root, int MaThe){
 	return SearchDocGia(root->right, MaThe);
 }
 
-int SinhMaThe(TREE_TheDocGia root){
+int SinhMaThe(PTR_TheDocGia root){
 	int ma;
 	do {
 		ma=rand()% 90000+10000;
@@ -98,7 +98,7 @@ int SinhMaThe(TREE_TheDocGia root){
 	return ma;
 }
 
-bool InsertDocGia(TREE_TheDocGia &p, const TheDocGia &TDG){
+bool InsertDocGia(PTR_TheDocGia &p, const TheDocGia &TDG){
 	if (p == nullptr){
 		p = new DS_TheDocGia;
 		p ->data = TDG;
@@ -124,7 +124,7 @@ void TimLop(DS_TheDocGia*& p, DS_TheDocGia*& q){
 	}
 }
 
-bool DelDocGia(TREE_TheDocGia& p, int MaThe){
+bool DelDocGia(PTR_TheDocGia& p, int MaThe){
 	if (p==nullptr) return false;
 	if (MaThe < p->data.MaThe){
 		return DelDocGia(p ->left,MaThe);
@@ -133,7 +133,7 @@ bool DelDocGia(TREE_TheDocGia& p, int MaThe){
 		return DelDocGia(p->right, MaThe);
 	}
 	else{
-		for (TREE_TheDocGia cur = p->data.mt; cur != nullptr; cur = cur->next) {
+		for (PTR_TheDocGia cur = p->data.mt; cur != nullptr; cur = cur->next) {
             if (cur->data.TrangThaiThe == 0) {
                 cout << "Doc gia dang muon sach chua tra, 0 xoa the!\n";
                 return false;
@@ -148,7 +148,7 @@ bool DelDocGia(TREE_TheDocGia& p, int MaThe){
 
 //Cau A ****chua chinh thuc, chua lam giao dien
 
-void ThemTheDocGia(TREE_TheDocGia& root){
+void ThemTheDocGia(PTR_TheDocGia& root){
 	TheDocGia dg;
 	dg.MaThe = SinhMaThe(root);
 	cout<<"\n them thanh cong \n";
@@ -171,7 +171,7 @@ void ThemTheDocGia(TREE_TheDocGia& root){
 	cout <<"them doc gia thanh cong";
 }
 
-void HieuChinhDocGia(TREE_TheDocGia root){
+void HieuChinhDocGia(PTR_TheDocGia root){
 	int mathe;
 	cout <<"\n nhap ma the can chinh";
 	cin>> mathe;
@@ -197,7 +197,7 @@ void HieuChinhDocGia(TREE_TheDocGia root){
 }
 	}
 }
-void XoaDocGia(TREE_TheDocGia &root){
+void XoaDocGia(PTR_TheDocGia &root){
 	int maThe;
     cout << "\nNhap ma the can xoa: ";
     cin >> maThe;
@@ -208,17 +208,17 @@ void XoaDocGia(TREE_TheDocGia &root){
 } 
 
 //Cau B chua chinh thuc con chinh them
-void chuyenCayVaoMang(TREE_TheDocGia root, TheDocGia* arr[], int& count) {
+void chuyenCayVaoMang(PTR_TheDocGia root, TheDocGia* arr[], int& count) {
     if (root == nullptr) return;
     chuyenCayVaoMang(root->Left, arr, count);
     arr[count++] = &(root->data);
     chuyenCayVaoMang(root->Right, arr, count);
 }
 
-//void SortByName(TREE_TheDocGia root){}
+//void SortByName(PTR_TheDocGia root){}
 //Tao cay moi voi key = ten
 
-void InDS_DocGia(TREE_TheDocGia root){
+void InDS_DocGia(PTR_TheDocGia root){
     TheDocGia* arr[MAX_DAUSACH];
     int count = 0;
     chuyenCayVaoMang(root, arr, count);
