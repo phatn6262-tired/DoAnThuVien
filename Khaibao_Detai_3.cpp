@@ -1,5 +1,5 @@
 #include <bits/stdc++.h>
-#include <mylib.h>
+#include "mylib.h"
 using namespace std;
 const long long MAXSACH = 10000;
 
@@ -109,10 +109,25 @@ void CapNhatSachMuon(PTR_MuonTra &n, string MaSach){
 	n->data.TrangThai = 0;
 	n->next = NULL;
 }
+PTR_MuonTra TimSachDaMuon(PTR_MuonTra &p, string MaSach){
+	PTR_MuonTra q;
+	PTR_MuonTra pre_q = NULL;
+	for (q = p; q != NULL; q = q->next){
+		if(MaSach == q->data.MaSach){
+			pre_q = q;
+			if(q->data.TrangThai == 0){
+				return q;
+			}
+		}
+	}
+	return pre_q;
+}
 
 struct TheDocGia{
 	int MaThe;
-	string Ho, Ten, Phai; 
+	char Ho[40];
+	char Ten[20];
+	char Phai[5]; 
 	int TrangThai;
 	PTR_MuonTra mt = NULL;
 };
@@ -170,7 +185,7 @@ void MuonSach(PTR_TheDocGia &root, DS_DauSach &DS){
 	PTR_TheDocGia p; int MaThe;
 
 	do{
-		cout << "Nhập mã thẻ độc gia: "; cin >> MaThe; cin.ignore();
+		cout << "Nhập mã thẻ độc giả: "; cin >> MaThe; cin.ignore();
 		p = TimMaThe(root, MaThe);
 		if(p == NULL)
 			cout << "Mã thẻ không hợp lệ, nhập lại!" << endl;
@@ -251,11 +266,124 @@ void MuonSach(PTR_TheDocGia &root, DS_DauSach &DS){
 	} while(p == NULL);
 }
 
-//Cau G
-void TraSach(PTR_TheDocGia &root, PTR_DanhMucSach &DMS,int Mathe, int MaSach){}
+void TraSach(PTR_TheDocGia &root, DS_DauSach &DS){
+	PTR_TheDocGia p; int MaThe;
+	
+	do{
+		cout <<"Nhập mã thẻ độc giả: ";
+		cin >> MaThe;
+		cin.ignore();
+		p = TimMaThe(root, MaThe);
+		if(p == NULL)
+			cout << "Mã thẻ không hợp lệ, nhập lại!" << endl;
+		else{
+			int BookSum = 0;
+			InDS_MuonTra(p,BookSum);
+			if(BookSum == 0){
+				cout << "Độc giả không mượn cuốn sách nào!";
+				_getch();
+				return;
+			}
+			PTR_MuonTra q;
+			PTR_DanhMucSach exist;
+			do{
+				string Masach;
+				cout << "Nhập mã thẻ của sách muốn trả: ";
+				getline(cin, Masach);
 
-//Cau H
-void LietKeSachMuon(int Mathe, PTR_TheDocGia &p){}
+				exist = TimSach(DS,Masach);
+				if(exist == NULL){
+						cout << "Mã sách không tồn tại, nhập lại!";
+						continue;
+				}
+
+				q = TimSachDaMuon(p->data.mt,Masach);
+				if(q == NULL){
+					cout <<"Độc giả chưa từng mượn sách này!";
+					continue;
+				}
+				else if(q->data.TrangThai == 1){
+					cout << "Độc giả đã trả sách!";
+					continue;
+				}
+				else if(q->data.TrangThai == 2){
+					cout <<"Độc giả đã làm mất sách!";
+					continue;
+				}
+				else{
+					char xn;
+					cout << "Xác nhận trả sách (Y/N) ?:";
+					cin >> xn; cin.ignore();
+					xn = tolower(xn);
+					if(xn == 'y'){
+						q->data.NgayTra = LayNgayHienTai();
+						q->data.TrangThai = 1;
+						exist->data.TrangThai = 0;
+						cout << "Trả sách thành công!";
+						return;
+					}
+					else{
+						cout << "Đã hủy trả sách!";
+						return;
+					}
+				}
+
+
+			}while(exist == NULL || q == NULL ||q->data.TrangThai == 1|| q->data.TrangThai == 2);
+		}
+	} while (p == NULL);
+}
+
+string TimTenSach(const DS_DauSach &DS, string MaSach) {
+    for (int i = 0; i < DS.n; i++) {
+        DauSach *p = DS.ds[i];
+
+        for (PTR_DanhMucSach q = p->dms;
+             q != NULL;
+             q = q->next) {
+
+            if (q->data.MaSach == MaSach) {
+                return p->TenSach;
+            }
+        }
+    }
+
+    return "Khong tim thay";
+}
+void InDS_Muon(PTR_TheDocGia p, DS_DauSach DS){
+	cout << left << setw(15) <<"Mã sách"<< setw(30) << "Tên sách" << setw(15) <<"Ngày mượn" << setw(15) <<"Ngày trả" << setw(15) <<"Trạng thái" << endl;
+	PTR_MuonTra q;
+	bool coSach = false;
+	for (q = p->data.mt; q != NULL; q = q->next){
+		if (q->data.TrangThai == 0){
+            coSach = true;
+
+            string tenSach = TimTenSach(DS, q->data.MaSach);
+
+            cout << left
+                 << setw(15) << q->data.MaSach
+                 << setw(30) << tenSach
+                 << setw(15) << (
+                     to_string(q->data.NgayMuon.Ngay) + "/" +
+                     to_string(q->data.NgayMuon.Thang) + "/" +
+                     to_string(q->data.NgayMuon.Nam)
+                 )
+                 << setw(15) << "Đang mượn"
+                 << endl;
+        }
+	}
+	if(coSach == false){
+		cout << "Độc giả hiện không có sách đang mượn!" << endl;
+	}
+}
+void LietKeSachMuon(int Mathe, PTR_TheDocGia &root, DS_DauSach DS){
+	PTR_TheDocGia p = TimMaThe(root, Mathe);
+	if(p == NULL){
+		cout << "Mã thẻ không tồn tại!";
+		return;
+	}
+	InDS_Muon(p,DS);
+}
 
 //Cau I
 int ThoiGianMuon(int NgayMuon){};
