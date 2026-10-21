@@ -2,7 +2,6 @@
 #include "mylib.h"
 using namespace std;
 const long long MAXSACH = 10000;
-const int MAXDOCGIA = 10000;
 
 struct ThongTinSach{ //Node cho DanhMucSach
 	string MaSach;
@@ -181,12 +180,7 @@ int coQuaHan(PTR_TheDocGia &p){
 	}
 	return 0;
 }
-int MIN(int a, int b){
-	if(a < b) return a;
-	else return b;
-}
 
-//Câu F: Mượn sách
 void MuonSach(PTR_TheDocGia &root, DS_DauSach &DS){
 	PTR_TheDocGia p; int MaThe;
 
@@ -272,7 +266,6 @@ void MuonSach(PTR_TheDocGia &root, DS_DauSach &DS){
 	} while(p == NULL);
 }
 
-//Câu G: Trả sách
 void TraSach(PTR_TheDocGia &root, DS_DauSach &DS){
 	PTR_TheDocGia p; int MaThe;
 	
@@ -341,12 +334,14 @@ void TraSach(PTR_TheDocGia &root, DS_DauSach &DS){
 	} while (p == NULL);
 }
 
-//Câu H: Liệt kê sách mượn
 string TimTenSach(const DS_DauSach &DS, string MaSach) {
     for (int i = 0; i < DS.n; i++) {
         DauSach *p = DS.ds[i];
 
-        for (PTR_DanhMucSach q = p->dms; q != NULL;q = q->next) {
+        for (PTR_DanhMucSach q = p->dms;
+             q != NULL;
+             q = q->next) {
+
             if (q->data.MaSach == MaSach) {
                 return p->TenSach;
             }
@@ -358,10 +353,10 @@ string TimTenSach(const DS_DauSach &DS, string MaSach) {
 void InDS_Muon(PTR_TheDocGia p, DS_DauSach DS){
 	cout << left << setw(15) <<"Mã sách"<< setw(30) << "Tên sách" << setw(15) <<"Ngày mượn" << setw(15) <<"Ngày trả" << setw(15) <<"Trạng thái" << endl;
 	PTR_MuonTra q;
-	bool coSachMuon = false;
+	bool coSach = false;
 	for (q = p->data.mt; q != NULL; q = q->next){
 		if (q->data.TrangThai == 0){
-            coSachMuon = true;
+            coSach = true;
 
             string tenSach = TimTenSach(DS, q->data.MaSach);
 
@@ -377,7 +372,7 @@ void InDS_Muon(PTR_TheDocGia p, DS_DauSach DS){
                  << endl;
         }
 	}
-	if(coSachMuon == false){
+	if(coSach == false){
 		cout << "Độc giả hiện không có sách đang mượn!" << endl;
 	}
 }
@@ -390,127 +385,12 @@ void LietKeSachMuon(int Mathe, PTR_TheDocGia &root, DS_DauSach DS){
 	InDS_Muon(p,DS);
 }
 
-//Câu I: Danh sách độc giả quá hạn
-struct DGQuaHan {
-    PTR_TheDocGia docgia;
-    int TongNgayQuaHan;
-};
-int ThoiGianMuon(PTR_MuonTra &mt){
-	NgayThang NgayHienTai = LayNgayHienTai();
-	int SoNgayQuaHan = 0;
-	PTR_MuonTra p;
-	for (p = mt; p != NULL; p = p->next){
-		if(p->data.TrangThai == 0){
-			int SoNgayMuon = SoNgay(p->data.NgayMuon, NgayHienTai);
-			if(SoNgayMuon > 7)
-				SoNgayQuaHan += (SoNgayMuon-7);
-			else
-				continue;
-		}
-	}
-	return SoNgayQuaHan;
-}
-void TGQuaHanGiamDan(DGQuaHan DG[], int n){
-	for (int i = 0; i < n-1; i++){
-		int largest = i;
-		for (int j = i+1; j <n; j++){
-			if(DG[j].TongNgayQuaHan > DG[largest].TongNgayQuaHan)
-				largest = j;
-		}
-		DGQuaHan tmp = DG[i];
-		DG[i] = DG[largest];
-		DG[largest] = tmp;
-	}
-}
-void NLR_TheDocGia(PTR_TheDocGia root, DGQuaHan DG[], int &pos){
-	if(root == NULL) return;
-	int TongNgayQuaHan = ThoiGianMuon(root->data.mt);
-	if(TongNgayQuaHan > 0){
-		DG[pos].docgia = root;
-		DG[pos].TongNgayQuaHan = TongNgayQuaHan;
-		pos++;
-	}
-	NLR_TheDocGia(root->left, DG, pos);
-	NLR_TheDocGia(root->right, DG, pos);
-}
-void INDS_QuaHan(PTR_TheDocGia &root){
-	DGQuaHan DG[MAXDOCGIA];
-	int n = 0;
-	NLR_TheDocGia(root, DG, n);
-	if(n == 0){
-		cout << "Không có độc giả nào mượn sách quá hạn!" << endl;
-		return;
-	}
+//Cau I
+int ThoiGianMuon(int NgayMuon){};
+void INDS_QuaHan(PTR_TheDocGia &root){};
 
-	TGQuaHanGiamDan(DG, n);
-	cout << "====================================DANH SÁCH ĐỘC GIẢ MƯỢN SÁCH QUÁ HẠN====================================" << endl;
-	cout << endl;
-	cout << left << setw(10) << "MÃ THẺ" << setw(40) << "HỌ" << setw(20) << "TÊN" << setw(5) << "PHÁI"  << setw(4) << "THỜI GIAN QUÁ HẠN" << endl;
-	for (int i=0; i<n; i++){
-		cout << left << setw(10) << DG[i].docgia->data.MaThe 
-			 << setw(40) << DG[i].docgia->data.Ho
-			 << setw(20) << DG[i].docgia->data.Ten
-			 << setw(5) << DG[i].docgia->data.Phai
-			 << setw(4) << DG[i].TongNgayQuaHan << endl;
-	}
-}
-
-//Câu J: Top 10 sách được mượn
-void NLR_DemLuotMuon(PTR_TheDocGia root, string MaSach, int &cnt){
-	if (root == NULL) return;
-	PTR_MuonTra p;
-	for (p = root->data.mt; p != NULL; p = p->next){
-		if(p->data.MaSach == MaSach) cnt++;
-	}
-	NLR_DemLuotMuon(root->left, MaSach, cnt);
-	NLR_DemLuotMuon(root->right, MaSach, cnt);
-}
-struct DS_Muon{
-	DauSach *ds;
-	int TongLanMuon = 0;
-};
-int DemTongLanMuon(DauSach* ds, PTR_TheDocGia root){
-	int TongCnt = 0;
-	PTR_DanhMucSach p;
-	for (p = ds->dms; p != NULL; p = p->next){
-		int Cnt = 0;
-		NLR_DemLuotMuon(root,p->data.MaSach, Cnt);
-		TongCnt += Cnt;
-	}
-	return TongCnt;
-}
-void Top10Sach(DS_DauSach *DS, PTR_TheDocGia root){
-	DS_Muon DSM[MAXSACH];
-	for (int i = 0; i < DS->n; i++){
-		DSM[i].ds = DS->ds[i];
-		DSM[i].TongLanMuon = DemTongLanMuon(DS->ds[i],root);
-	}
-	for (int i = 0; i<DS->n-1; i++){
-		int largest = i;
-		for (int j = i+1; j<DS->n; j++){
-			if(DSM[j].TongLanMuon > DSM[largest].TongLanMuon){
-				largest = j;
-			}
-		}
-		DS_Muon tmp = DSM[i];
-		DSM[i] = DSM[largest];
-		DSM[largest] = tmp;
-	}
-	int soLuongIn = MIN(10, DS->n);
-	cout << "========================TOP "<< soLuongIn << "SÁCH ĐƯỢC MƯỢN NHIỀU NHẤT========================" << endl;
-	cout << left << setw(5) << "STT" << setw(20) <<"MÃ ISBN" << setw(50) << "TÊN SÁCH" << setw(50) <<"TÁC GIẢ" << setw(15) << "THỂ LOẠI" << setw(15) << "SỐ LƯỢT MƯỢN" << endl;
-	
-	
-	for (int i = 0; i<soLuongIn; i++){
-		cout << left << setw(5) << i+1 
-			 << setw(20) <<DSM[i].ds->ISBN
-			 << setw(50) << DSM[i].ds->TenSach
-			 << setw(50) << DSM[i].ds->TacGia
-			 << setw(15) << DSM[i].ds->TheLoai
-			 << setw(15) << DSM[i].TongLanMuon<< endl;
-	}
-}
-
+//Cau J
+void Top10Sach(DauSach *ds, PTR_MuonTra MT){}
 int main(){
 	PTR_TheDocGia root = NULL;
 	PTR_DanhMucSach DMS = NULL;
