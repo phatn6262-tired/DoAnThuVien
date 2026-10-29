@@ -1,4 +1,5 @@
 #include <bits/stdc++.h>
+#include<string>
 #include <conio.h>
 using namespace std;
 
@@ -387,8 +388,58 @@ void InDS_DocGia(PTR_TheDocGia root) {
 }
 
 // ===================== CÂU C =====================
-void SinhMaSach(DauSach &b);
-void ThemDauSach(DS_DauSach *ds, DauSach b){}
+int DemSoSachCon(PTR_DanhMucSach head) {
+    int cnt = 0;
+    for (PTR_DanhMucSach p = head; p != nullptr; p = p->next) cnt++;
+    return cnt;
+}
+void SinhMaSach(DauSach &b){
+	int soLuong;
+		cout << "Nhap so luong ban in can them cho dau sach: ";
+		cin >> soLuong;
+		cin.ignore();
+		
+		string viTri;
+		cout << "Nhap vi tri dat sach tren ke: ";
+		getline(cin, viTri);
+
+		int stt = DemSoSachCon(b.dms) + 1;
+		for (int i = 0; i < soLuong; ++i) {
+			PTR_DanhMucSach p = new DanhMucSach;
+			p->data.MaSach = b.ISBN + "_" + to_string(stt++);
+			p->data.TrangThai = 0; // 0: Cho mượn được
+			p->data.ViTri = viTri;
+			p->next = nullptr;
+
+			if (b.dms == nullptr) {
+				b.dms = p;
+			} else {
+				PTR_DanhMucSach cur = b.dms;
+				while (cur->next != nullptr) cur = cur->next;
+				cur->next = p;
+			}
+		}
+		cout << "=> Da tu dong danh ma cho " << soLuong << " cuon sach!\n";
+}
+void ThemDauSach(DS_DauSach *ds, DauSach b){
+    if (ds->n >= MAXSACH) {
+        cout << "(!) Danh sach dau sach da day, khong the them!\n";
+        return;
+    }
+
+    DauSach* pMoi = new DauSach;
+    *pMoi = b;
+
+    int pos = ds->n;
+    // Chèn có thứ tự tăng dần theo TenSach
+    while (pos > 0 && ds->ds[pos - 1]->TenSach > pMoi->TenSach) {
+        ds->ds[pos] = ds->ds[pos - 1];
+        pos--;
+    }
+    ds->ds[pos] = pMoi;
+    ds->n++;
+    cout << "=> Them dau sach co thu tu thanh cong!\n";
+}
 
 // ===================== CÂU D =====================
 void InDS_DauSach(DS_DauSach *ds){
