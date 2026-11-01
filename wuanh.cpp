@@ -421,17 +421,28 @@ void SinhMaSach(DauSach &b){
 		}
 		cout << "=> Da tu dong danh ma cho " << soLuong << " cuon sach!\n";
 }
+
+int TimDauSachTheoISBN(DS_DauSach *ds, string isbn) {
+    for (int i = 0; i < ds->n; ++i) {
+        if (ds->ds[i]->ISBN == isbn) return i;
+    }
+    return -1;
+}
+
 void ThemDauSach(DS_DauSach *ds, DauSach b){
     if (ds->n >= MAXSACH) {
         cout << "(!) Danh sach dau sach da day, khong the them!\n";
         return;
     }
 
+	if (TimDauSachTheoISBN(ds, b.ISBN) !=-1){
+		cout<<" Ma sach nay da ton tai\n";
+	}
+	
     DauSach* pMoi = new DauSach;
     *pMoi = b;
 
     int pos = ds->n;
-    // Chèn có thứ tự tăng dần theo TenSach
     while (pos > 0 && ds->ds[pos - 1]->TenSach > pMoi->TenSach) {
         ds->ds[pos] = ds->ds[pos - 1];
         pos--;
