@@ -1,0 +1,56 @@
+BO DU LIEU MAU - DO AN QUAN LY THU VIEN
+========================================
+
+Cac file:
+- DAUSACH.TXT
+- THEDOCGIA.TXT
+- MUONTRA.TXT
+
+Day la bo du lieu mau theo phuong an A: thong nhat dinh dang truoc, sau do viet ham doc file.
+Dinh dang du lieu chua phai dinh dang ma chuong trinh hien tai tu doc duoc, vi code chua co ham doc file.
+
+1) DAUSACH.TXT
+Moi dong la mot dau sach:
+ISBN|TenSach|TacGia|TheLoai|SoTrang|NamXuatBan|DanhMucSach
+
+Trong DanhMucSach, moi cuon sach co dang:
+MaSach,TrangThai,ViTri
+Nhieu cuon sach ngan cach bang dau cham phay (;).
+
+TrangThai cuon sach:
+0 = con trong
+1 = dang duoc muon
+2 = da thanh ly / mat (theo quy uoc hien tai cua code)
+
+2) THEDOCGIA.TXT
+Moi dong:
+MaThe|Ho|Ten|Phai|TrangThaiThe
+
+TrangThaiThe:
+0 = bi khoa
+1 = hoat dong
+
+3) MUONTRA.TXT
+Moi dong:
+MaThe|MaSach|NgayMuon|NgayTra|TrangThai
+
+Ngay co dang dd/mm/yyyy. Neu chua tra thi NgayTra = 0/0/0.
+TrangThai lich su muon tra:
+0 = dang muon
+1 = da tra
+2 = lam mat sach
+
+LUU Y TINH NHAT QUAN:
+- Moi MaSach trong MUONTRA.TXT deu ton tai trong DAUSACH.TXT.
+- Cac ban ghi MUONTRA co TrangThai = 0 phai ung voi cuon sach TrangThai = 1.
+- Ban ghi MUONTRA co TrangThai = 2 phai ung voi cuon sach TrangThai = 2.
+- Ban ghi MUONTRA co TrangThai = 1 thi cuon sach hien tai co the TrangThai = 0.
+- The doc gia 12005 dang bi khoa, nhung lich su cu da tra het.
+- Cac ngay muon dang muon duoc chon gan ngay 20-27/10/2026 de tranh bi qua han khi kiem thu ngay 31/10/2026.
+
+THU TU DOC DE XAY DUNG DU LIEU:
+1. Doc DAUSACH.TXT va tao danh sach dau sach + danh muc sach.
+2. Doc THEDOCGIA.TXT va tao cay nhi phan tim kiem doc gia.
+3. Doc MUONTRA.TXT va gan cac node muon tra vao dung doc gia theo MaThe.
+
+Khong doc MUONTRA truoc khi da co danh sach doc gia va danh muc sach.

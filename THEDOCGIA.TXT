@@ -1,0 +1,6 @@
+12001|Nguyen Van|An|Nam|1
+12002|Tran Thi|Binh|Nu|1
+12003|Le Quoc|Cuong|Nam|1
+12004|Pham Ngoc|Dung|Nu|1
+12005|Vo Minh|Em|Nam|0
+12006|Dang Thu|Giang|Nu|1

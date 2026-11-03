@@ -1,5 +1,6 @@
 #include <bits/stdc++.h>
 #include "mylib.h"
+#include <conio.h>
 using namespace std;
 const long long MAXSACH = 10000;
 const int MAXDOCGIA = 10000;
@@ -91,7 +92,8 @@ NgayThang LayNgayHienTai() {
     return d;
 }
 
-struct MuonTra{ //Node cho DS_MUONTRA
+//===========================MƯỢN TRẢ==============================
+struct MuonTra{
 	string MaSach;
 	NgayThang NgayMuon, NgayTra;
 	int TrangThai;
@@ -124,6 +126,7 @@ PTR_MuonTra TimSachDaMuon(PTR_MuonTra &p, string MaSach){
 	return pre_q;
 }
 
+//===================== THẺ ĐỘC GIẢ =====================
 struct TheDocGia{
 	int MaThe;
 	char Ho[40];
@@ -162,14 +165,23 @@ void InDS_MuonTra(PTR_TheDocGia &p, int &BookSum){
 		}
 	}
 }
-PTR_TheDocGia TimMaThe(PTR_TheDocGia &root, int MaThe){
-	if(root == NULL) return NULL;
-	
-	if (MaThe == root->data.MaThe) return root;
-
-	if(MaThe < root->data.MaThe) return TimMaThe(root->left, MaThe);
-	else return TimMaThe(root->right, MaThe);
+PTR_TheDocGia SearchDocGia(PTR_TheDocGia root, int MaThe) {
+	if (root == nullptr || root->data.MaThe == MaThe) {
+		return root;
+	}
+	if (MaThe < root->data.MaThe) {
+		return SearchDocGia(root->left, MaThe);
+	}
+	return SearchDocGia(root->right, MaThe);
 }
+int SinhMaThe(PTR_TheDocGia root) {
+	int ma;
+	do {
+		ma = rand() % 90000 + 10000;
+	} while (SearchDocGia(root, ma) != nullptr);
+	return ma;
+}
+
 int coQuaHan(PTR_TheDocGia &p){
 	PTR_MuonTra q;
 	NgayThang NgayHienTai = LayNgayHienTai();
@@ -186,13 +198,280 @@ int MIN(int a, int b){
 	else return b;
 }
 
+void TimLop(DS_TheDocGia*& p, DS_TheDocGia*& q) {
+	if (q->left != nullptr) {
+		TimLop(p, q->left);
+	} 
+	else {
+		p->data = q->data;
+		DS_TheDocGia* temp = q;
+		q = q->right;
+		delete temp;
+	}
+}
+bool InsertDocGia(PTR_TheDocGia &p, const TheDocGia &TDG) {
+	if (p == nullptr) {
+		p = new DS_TheDocGia;
+		p->data = TDG;
+		p->left = p->right = nullptr;
+		return true;
+	}
+	if (TDG.MaThe < p->data.MaThe) {
+		return InsertDocGia(p->left, TDG);
+	}
+	if (TDG.MaThe > p->data.MaThe) {
+		return InsertDocGia(p->right, TDG);
+	}
+	return false;
+}
+bool DelDocGia(PTR_TheDocGia& p, int MaThe) {
+	if (p == nullptr) return false;
+	if (MaThe < p->data.MaThe) {
+		return DelDocGia(p->left, MaThe);
+	}
+	if (MaThe > p->data.MaThe) {
+		return DelDocGia(p->right, MaThe);
+	}
+
+	for (PTR_MuonTra cur = p->data.mt; cur != nullptr; cur = cur->next) {
+        if (cur->data.TrangThai == 0) {
+            cout << "Doc gia dang muon sach chua tra, 0 xoa the!\n";
+            return false;
+        }
+	}
+	DS_TheDocGia* temp = p;
+	if (p->left == nullptr) p = p->right;
+	else if (p->right == nullptr) p = p->left;
+	else{
+		TimLop(p, p->right);
+		return true;
+	}
+	delete temp;
+	return true;
+	
+}
+
+// ===================== CÂU A: THẺ ĐỘC GIẢ =====================
+void ThemTheDocGia(PTR_TheDocGia& root) {
+	TheDocGia dg;
+	dg.MaThe = SinhMaThe(root);
+	cout << "\n them thanh cong \n";
+	cout << " ma the " << dg.MaThe << "\n";
+	cin.ignore();
+	cout << "nhap ho: "; cin.getline(dg.Ho, 40);
+	cout << "nhap ten: "; cin.getline(dg.Ten, 20);
+
+	do {
+		cout << " gioi tinh (Nam/Nu): ";
+		cin.getline(dg.Phai, 5);
+		if (stricmp(dg.Phai, "Nam") != 0 && stricmp(dg.Phai, "Nu") != 0) {
+			cout << "chi duoc nhap Nam hoc Nu: \n";
+		}
+	} while (stricmp(dg.Phai, "Nam") != 0 && stricmp(dg.Phai, "Nu") != 0);
+
+	dg.TrangThai = 1;
+	dg.mt = nullptr;
+	InsertDocGia(root, dg);
+	cout << "them doc gia thanh cong";
+}
+void HieuChinhDocGia(PTR_TheDocGia root) {
+	int mathe;
+	cout << "\n nhap ma the can chinh: ";
+	cin >> mathe;
+	DS_TheDocGia* p = SearchDocGia(root, mathe);
+	if (!p) {
+		cout << "ko tim thay";
+		return;
+	}
+	cin.ignore();
+	cout << " nhap ho: ";
+	cin.getline(p->data.Ho, 40);
+	cout << " nhap ten: ";
+	cin.getline(p->data.Ten, 20);
+
+	do {
+		cout << "nhap gioi tinh (Nam/Nu): ";
+		cin.getline(p->data.Phai, 5);
+    } while (stricmp(p->data.Phai, "Nam") != 0 && stricmp(p->data.Phai, "Nu") != 0);
+
+    cout << "Trang thai the (0: Khoa, 1: Hoat dong): ";
+    cin >> p->data.TrangThai;
+    cout << "=> Cap nhat the thanh cong!\n";
+}
+void XoaDocGia(PTR_TheDocGia &root) {
+	int maThe;
+    cout << "\nNhap ma the can xoa: ";
+    cin >> maThe;
+    if (DelDocGia(root, maThe))
+        cout << "=> Da xoa the doc gia thanh cong!\n";
+    else
+        cout << "(!) Xoa the that bai!\n";
+}
+
+//Cau B: In Danh Sach Doc Gia
+void chuyenCayVaoMang(PTR_TheDocGia root, TheDocGia* arr[], int& count) {
+    if (root == nullptr) return;
+    chuyenCayVaoMang(root->left, arr, count);
+    arr[count++] = &(root->data);
+    chuyenCayVaoMang(root->right, arr, count);
+}
+void InDS_DocGia(PTR_TheDocGia root) {
+    TheDocGia* arr[MAXSACH];
+    int count = 0;
+    chuyenCayVaoMang(root, arr, count);
+
+    for (int i = 0; i < count - 1; ++i) {
+        int minIdx = i;
+        for (int j = i + 1; j < count; ++j) {
+            int cmpTen = stricmp(arr[j]->Ten, arr[minIdx]->Ten);
+            if (cmpTen < 0 || (cmpTen == 0 && stricmp(arr[j]->Ho	, arr[minIdx]->Ho) < 0)) {
+                minIdx = j;
+            }
+        }
+        if (minIdx != i) swap(arr[i], arr[minIdx]);
+    }
+	cout << left << setw(10) << "MA THE" 
+         << setw(25) << "HO" 
+         << setw(15) << "TEN" 
+         << setw(8) << "PHAI" 
+         << setw(15) << "TRANG THAI" << "\n";
+    cout << string(73, '-') << "\n";
+
+    for (int i = 0; i < count; ++i) {
+		cout << left << setw(10) << arr[i]->MaThe
+	         << setw(25) << arr[i]->Ho
+	         << setw(15) << arr[i]->Ten
+	         << setw(8) << arr[i]->Phai
+	         << setw(15) << (arr[i]->TrangThai == 1 ? "Hoat dong" : "Bi khoa") << "\n";
+    }
+}
+
+//Cau C: Nhap thong tin sao cho tim thay sach nhanh nhat
+int DemSoSachCon(PTR_DanhMucSach DMS) {
+    int cnt = 0;
+    for (PTR_DanhMucSach p = DMS; p != nullptr; p = p->next) cnt++;
+    return cnt;
+}
+void SinhMaSach(DauSach &b){
+	int soLuong;
+		cout << "Nhap so luong ban in can them cho dau sach: ";
+		cin >> soLuong;
+		cin.ignore();
+		
+		string viTri;
+		cout << "Nhap vi tri dat sach tren ke: ";
+		getline(cin, viTri);
+
+		int stt = DemSoSachCon(b.dms) + 1;
+		for (int i = 0; i < soLuong; ++i) {
+			PTR_DanhMucSach p = new DanhMucSach;
+			p->data.MaSach = b.ISBN + "_" + to_string(stt++);
+			p->data.TrangThai = 0; // 0: Cho mượn được
+			p->data.ViTri = viTri;
+			p->next = nullptr;
+
+			if (b.dms == nullptr) {
+				b.dms = p;
+			} else {
+				PTR_DanhMucSach cur = b.dms;
+				while (cur->next != nullptr) cur = cur->next;
+				cur->next = p;
+			}
+		}
+		cout << "=> Da tu dong danh ma cho " << soLuong << " cuon sach!\n";
+}
+void ThemDauSach(DS_DauSach *ds, DauSach b){
+    if (ds->n >= MAXSACH) {
+        cout << "(!) Danh sach dau sach da day, khong the them!\n";
+        return;
+    }
+
+    DauSach* pMoi = new DauSach;
+    *pMoi = b;
+
+    int pos = ds->n;
+    // Chèn có thứ tự tăng dần theo TenSach
+    while (pos > 0 && ds->ds[pos - 1]->TenSach > pMoi->TenSach) {
+        ds->ds[pos] = ds->ds[pos - 1];
+        pos--;
+    }
+    ds->ds[pos] = pMoi;
+    ds->n++;
+    cout << "=> Them dau sach co thu tu thanh cong!\n";
+}
+
+//Cau D: InDS_DauSach theo the loai va tang dan theo ten sach
+void InDS_DauSach(DS_DauSach *ds){
+	if (ds->n==0){
+		cout<<"\nThu vien chua co dau sach nao";
+		return;
+	}
+	string tlDaIn[MAXSACH];
+	int slTL=0;
+
+	for (int i=0; i<ds->n;i++){
+		bool daCo = false;
+		for (int j=0;j<slTL;++j){
+			if (stricmp(ds->ds[i]->TheLoai.c_str(),tlDaIn[j].c_str()) == 0) {
+               	daCo = true;
+                	break;
+            	}
+        	}
+        	if (!daCo) {
+            	tlDaIn[slTL++] = ds->ds[i]->TheLoai;
+		}
+	}
+
+	for (int t = 0; t < slTL; ++t) {
+        cout << "\n================ THE LOAI: " << tlDaIn[t] << " ================\n";
+        cout << left << setw(15) << "ISBN"
+             << setw(35) << "TEN SACH"
+             << setw(10) << "SO TRANG"
+             << setw(20) << "TAC GIA"
+             << setw(10) << "NAM XB" << "\n";
+        cout << string(90, '-') << "\n";
+
+        for (int i = 0; i < ds->n; ++i) {
+            if (stricmp(ds->ds[i]->TheLoai.c_str(), tlDaIn[t].c_str()) == 0) {
+                cout << left << setw(15) << ds->ds[i]->ISBN
+                     << setw(35) << ds->ds[i]->TenSach
+                     << setw(10) << ds->ds[i]->SoTrang
+                     << setw(20) << ds->ds[i]->TacGia
+                     << setw(10) << ds->ds[i]->NamXuatBan << "\n";
+            }
+        }
+	}
+}
+
+// ===================== CÂU E =====================
+void TimSachTheoTen(DS_DauSach DS, PTR_DanhMucSach DMS, string TenSach){
+	bool timThay = false;
+    for (int i = 0; i < DS.n; i++) {
+        if (DS.ds[i]->TenSach.find(TenSach) != string::npos) {
+            timThay = true;
+            cout << "\nISBN: " << DS.ds[i]->ISBN
+                 << " | Ten sach: " << DS.ds[i]->TenSach
+                 << " | Tac gia: " << DS.ds[i]->TacGia
+                 << " | Nam XB: " << DS.ds[i]->NamXuatBan
+                 << " | The loai: " << DS.ds[i]->TheLoai << "\n";
+            cout << left << setw(15) << "MA SACH" << setw(20) << "TRANG THAI" << setw(20) << "VI TRI" << "\n";
+            for (PTR_DanhMucSach p = DS.ds[i]->dms; p != NULL; p = p->next) {
+                string tt = (p->data.TrangThai == 0) ? "Cho muon duoc" : 
+                            ((p->data.TrangThai == 1) ? "Da muon" : "Da thanh ly");
+                cout << left << setw(15) << p->data.MaSach << setw(20) << tt << setw(20) << p->data.ViTri << "\n";
+            }
+        }
+    }
+    if (!timThay) cout << "Khong tim thay dau sach phu hop!\n";
+}
+
 //Câu F: Mượn sách
 void MuonSach(PTR_TheDocGia &root, DS_DauSach &DS){
 	PTR_TheDocGia p; int MaThe;
 
 	do{
 		cout << "Nhập mã thẻ độc giả: "; cin >> MaThe; cin.ignore();
-		p = TimMaThe(root, MaThe);
+		p = SearchDocGia(root, MaThe);
 		if(p == NULL)
 			cout << "Mã thẻ không hợp lệ, nhập lại!" << endl;
 		else{
@@ -280,7 +559,7 @@ void TraSach(PTR_TheDocGia &root, DS_DauSach &DS){
 		cout <<"Nhập mã thẻ độc giả: ";
 		cin >> MaThe;
 		cin.ignore();
-		p = TimMaThe(root, MaThe);
+		p = SearchDocGia(root, MaThe);
 		if(p == NULL)
 			cout << "Mã thẻ không hợp lệ, nhập lại!" << endl;
 		else{
@@ -382,7 +661,7 @@ void InDS_Muon(PTR_TheDocGia p, DS_DauSach DS){
 	}
 }
 void LietKeSachMuon(int Mathe, PTR_TheDocGia &root, DS_DauSach DS){
-	PTR_TheDocGia p = TimMaThe(root, Mathe);
+	PTR_TheDocGia p = SearchDocGia(root, Mathe);
 	if(p == NULL){
 		cout << "Mã thẻ không tồn tại!";
 		return;
@@ -455,7 +734,7 @@ void INDS_QuaHan(PTR_TheDocGia &root){
 	}
 }
 
-//Câu J: Top 10 sách được mượn
+//Câu J: Top n sách được mượn
 void NLR_DemLuotMuon(PTR_TheDocGia root, string MaSach, int &cnt){
 	if (root == NULL) return;
 	PTR_MuonTra p;
@@ -479,7 +758,7 @@ int DemTongLanMuon(DauSach* ds, PTR_TheDocGia root){
 	}
 	return TongCnt;
 }
-void Top10Sach(DS_DauSach *DS, PTR_TheDocGia root){
+void TopSach(DS_DauSach *DS,int soluong, PTR_TheDocGia root){
 	DS_Muon DSM[MAXSACH];
 	for (int i = 0; i < DS->n; i++){
 		DSM[i].ds = DS->ds[i];
@@ -496,12 +775,11 @@ void Top10Sach(DS_DauSach *DS, PTR_TheDocGia root){
 		DSM[i] = DSM[largest];
 		DSM[largest] = tmp;
 	}
-	int soLuongIn = MIN(10, DS->n);
-	cout << "========================TOP "<< soLuongIn << "SÁCH ĐƯỢC MƯỢN NHIỀU NHẤT========================" << endl;
+	cout << "========================TOP "<< soluong << "SÁCH ĐƯỢC MƯỢN NHIỀU NHẤT========================" << endl;
 	cout << left << setw(5) << "STT" << setw(20) <<"MÃ ISBN" << setw(50) << "TÊN SÁCH" << setw(50) <<"TÁC GIẢ" << setw(15) << "THỂ LOẠI" << setw(15) << "SỐ LƯỢT MƯỢN" << endl;
 	
 	
-	for (int i = 0; i<soLuongIn; i++){
+	for (int i = 0; i<soluong; i++){
 		cout << left << setw(5) << i+1 
 			 << setw(20) <<DSM[i].ds->ISBN
 			 << setw(50) << DSM[i].ds->TenSach
@@ -511,7 +789,73 @@ void Top10Sach(DS_DauSach *DS, PTR_TheDocGia root){
 	}
 }
 
+void ReadDauSach(DS_DauSach *DS){
+	ifstream fin("DAUSACH.txt");
+	if(!fin.is_open()){
+		cout << "Khong mo duoc file!" << endl;
+		return;
+	}
+	string s;
+	while (getline(fin,s)){
+		if(s == "") continue;
+		DauSach ds;
+		int i = 0;
+
+		while (i < s.length() && s[i] != '|')
+			ds.ISBN += s[i++];
+		i++;
+		while (i < s.length() && s[i] != '|')
+			ds.TenSach += s[i++];
+		i++;
+		while (i < s.length() && s[i] != '|')
+			ds.TacGia += s[i++];
+		i++;
+		while (i < s.length() && s[i] != '|')
+			ds.TheLoai += s[i++]; 
+		i++;
+
+		ds.SoTrang = 0; ds.NamXuatBan = 0;
+
+		while (i < s.length() && s[i] != '|')
+			ds.SoTrang = ds.SoTrang*10 + (s[i++] - '0');
+		i++;
+		while (i <s.length() && s[i] != '|')
+			ds.NamXuatBan = ds.NamXuatBan*10 +(s[i++] - '0');
+		i++;
+		PTR_DanhMucSach pre = NULL;
+		ds.dms = NULL;
+
+		while (i <s.length()){
+			PTR_DanhMucSach p = new DanhMucSach;
+			p->next = NULL;
+
+			if(s[i] == ';')i++;
+
+			while (i < s.length() && s[i] != ',')
+				p->data.MaSach += s[i++];
+			i++;
+			while (i < s.length() && s[i] != ',')
+				p->data.TrangThai = s[i++] - '0';
+			i++;
+			while (i < s.length() && s[i] != ';')
+				p->data.ViTri += s[i++];
+			
+			if(pre == NULL){
+				ds.dms = p;
+			}
+			else{
+				pre->next = p;
+			}
+			pre = p;
+		}
+		ThemDauSach(DS, ds);
+	}
+	fin.close();
+}
+
 int main(){
+	DS_DauSach DS;
 	PTR_TheDocGia root = NULL;
-	PTR_DanhMucSach DMS = NULL;
+	
+	return 0;
 }
