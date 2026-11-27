@@ -99,9 +99,11 @@ public:
 #define KEY_F2       60
 #define KEY_F3       61
 #define KEY_F5       63
+#define KEY_F6       64
 
 // ===================== H?NG S? D? LI?U =====================
-const int MAXSACH        = 10000;
+const long long MAXSACH  = 10000;
+const int MAXDOCGIA      = 10000;
 const int MAX_MUON_SACH  = 3;
 const int HAN_MUON_NGAY  = 7;
 const int LINES_PER_PAGE = 10;
@@ -220,9 +222,6 @@ struct NgayThang {
     int Ngay;
     int Thang;
     int Nam;
-
-    NgayThang() : Ngay(0), Thang(0), Nam(0) {}
-    NgayThang(int d, int m, int y) : Ngay(d), Thang(m), Nam(y) {}
 };
 
 int NamNhuan(int Nam) {
@@ -250,7 +249,11 @@ int SoNgay(NgayThang NgayMuon, NgayThang NgayHienTai) {
 NgayThang LayNgayHienTai() {
     time_t now = time(nullptr);
     tm* ltm = localtime(&now);
-    return NgayThang(ltm->tm_mday, ltm->tm_mon + 1, ltm->tm_year + 1900);
+    NgayThang d;
+    d.Ngay = ltm->tm_mday;
+    d.Thang = ltm->tm_mon + 1;
+    d.Nam = ltm->tm_year + 1900;
+    return d;
 }
 
 string DateStr(const NgayThang& d) {
@@ -259,17 +262,15 @@ string DateStr(const NgayThang& d) {
     return b;
 }
 
+void InNgayThang(NgayThang nt) {
+    cout << nt.Ngay << "/" << nt.Thang << "/" << nt.Nam;
+}
+
 // ===================== CAU TRUC 1: DANH MUC MUON SACH =====================
 struct ThongTinSach {
-    char MaSach[30];
+    string MaSach;
     int TrangThai; // 0: cho muon duoc, 1: da muon, 2: thanh ly
-    char ViTri[30];
-
-    ThongTinSach() {
-        MaSach[0] = '\0';
-        TrangThai = 0;
-        ViTri[0] = '\0';
-    }
+    string ViTri;
 };
 
 struct DanhMucSach {
@@ -280,41 +281,22 @@ typedef DanhMucSach* PTR_DanhMucSach;
 
 // ===================== CAU TRUC 2: DAU SACH =====================
 struct DauSach {
-    char ISBN[20];
-    char TenSach[60];
-    int SoTrang;
-    char TacGia[40];
-    int NamXuatBan;
-    char TheLoai[30];
-    int SoLuotMuon;
-    PTR_DanhMucSach dms;
-
-    DauSach() {
-        ISBN[0] = '\0'; TenSach[0] = '\0'; SoTrang = 0;
-        TacGia[0] = '\0'; NamXuatBan = 0; TheLoai[0] = '\0';
-        SoLuotMuon = 0; dms = nullptr;
-    }
+    string ISBN, TenSach, TacGia, TheLoai;
+    int SoTrang, NamXuatBan;
+    PTR_DanhMucSach dms = NULL;
+    int SoLuotMuon = 0; // them: phuc vu thong ke top sach (khong co trong wuanh.cpp)
 };
 
 struct DS_DauSach {
-    int n;
     DauSach* ds[MAXSACH];
-    DS_DauSach() : n(0) {
-        for (int i = 0; i < MAXSACH; ++i) ds[i] = nullptr;
-    }
+    int n = 0;
 };
 
 // ===================== CAU TRUC 3: MUON TRA =====================
 struct MuonTra {
-    char MaSach[30];
-    NgayThang NgayMuon;
-    NgayThang NgayTra;
+    string MaSach;
+    NgayThang NgayMuon, NgayTra;
     int TrangThai; // 0: dang muon, 1: da tra, 2: lam mat
-
-    MuonTra() {
-        MaSach[0] = '\0';
-        TrangThai = 0;
-    }
 };
 
 struct DS_MuonTra {
@@ -326,15 +308,28 @@ typedef DS_MuonTra* PTR_MuonTra;
 // ===================== CAU TRUC 4: THE DOC GIA (BST) =====================
 struct TheDocGia {
     int MaThe;
-    char Ho[40];
-    char Ten[20];
-    char Phai[8];
-    int TrangThai; // 0: bi khoa, 1: hoat dong
+    char ho[40];
+    char ten[20];
+    char phai[5];
+    int TrangThaiThe; // 0: bi khoa, 1: hoat dong
     PTR_MuonTra mt;
 
     TheDocGia() {
-        MaThe = 0; Ho[0] = '\0'; Ten[0] = '\0';
-        Phai[0] = '\0'; TrangThai = 1; mt = nullptr;
+        MaThe = 0;
+        ho[0] = '\0';
+        ten[0] = '\0';
+        phai[0] = '\0';
+        TrangThaiThe = 1;
+        mt = nullptr;
+    }
+
+    TheDocGia(int _ma, const char* _ho, const char* _ten, const char* _phai, int _tt, PTR_MuonTra _mt) {
+        MaThe = _ma;
+        strcpy(ho, _ho);
+        strcpy(ten, _ten);
+        strcpy(phai, _phai);
+        TrangThaiThe = _tt;
+        mt = _mt;
     }
 };
 
@@ -382,10 +377,16 @@ void GiaiPhongDocGia(PTR_TheDocGia& root) {
 // ===================== THUAT TOAN CO SO =====================
 
 // [CAU A]: TIM KIM DOC GIA THEO MA THE
-PTR_TheDocGia TimMaThe(PTR_TheDocGia root, int MaThe) {
+PTR_TheDocGia TimMaThe(PTR_TheDocGia &root, int MaThe) {
     if (root == nullptr || root->data.MaThe == MaThe) return root;
     if (MaThe < root->data.MaThe) return TimMaThe(root->left, MaThe);
     return TimMaThe(root->right, MaThe);
+}
+
+PTR_TheDocGia SearchDocGia(PTR_TheDocGia root, int MaThe) {
+    if (root == nullptr || root->data.MaThe == MaThe) return root;
+    if (MaThe < root->data.MaThe) return SearchDocGia(root->left, MaThe);
+    return SearchDocGia(root->right, MaThe);
 }
 
 // [CAU A]: SINH MA THE TU DONG KHONG TRUNG
@@ -415,7 +416,7 @@ bool InsertDocGia(PTR_TheDocGia& p, const TheDocGia& TDG) {
 }
 
 // [CAU A]:TIM NUT THEO MANG
-void TimLop(PTR_TheDocGia& p, PTR_TheDocGia& q) {
+void TimLop(DS_TheDocGia*& p, DS_TheDocGia*& q) {
     if (q->left != nullptr) {
         TimLop(p, q->left);
     } else {
@@ -447,56 +448,65 @@ bool DelDocGia(PTR_TheDocGia& p, int MaThe) {
     return true;
 }
 
+// [CAU F] KIEM TRA DOC GIA CO SACH MUON QUA HAN KHONG
+int coQuaHan(PTR_TheDocGia &p) {
+    NgayThang NgayHienTai = LayNgayHienTai();
+    for (PTR_MuonTra q = p->data.mt; q != NULL; q = q->next) {
+        if (q->data.TrangThai == 0) {
+            int tong = SoNgay(q->data.NgayMuon, NgayHienTai);
+            if (tong > HAN_MUON_NGAY) return 1;
+        }
+    }
+    return 0;
+}
+
 // [CAU B] CHUYEN CAY SANG MANG CON TRO
-void ChuyenCayVaoMang(PTR_TheDocGia root, MangDong<TheDocGia*>& arr) {
+void chuyenCayVaoMang(PTR_TheDocGia root, TheDocGia* arr[], int& count) {
     if (root == nullptr) return;
-    ChuyenCayVaoMang(root->left, arr);
-    arr.push_back(&(root->data));
-    ChuyenCayVaoMang(root->right, arr);
+    chuyenCayVaoMang(root->left, arr, count);
+    if (count < MAXDOCGIA) arr[count++] = &(root->data);
+    chuyenCayVaoMang(root->right, arr, count);
 }
 
 // [CAU C] DEM SO CUON SACH CUA 1 DAU SACH
-int DemSoSachCuaDauSach(PTR_DanhMucSach head) {
+int DemSoSachCon(PTR_DanhMucSach head) {
     int dem = 0;
     for (PTR_DanhMucSach p = head; p != nullptr; p = p->next) dem++;
     return dem;
 }
 
-int TimDauSachTheoISBN(const DS_DauSach& DS, const char* isbn) {
-    for (int i = 0; i < DS.n; ++i) {
-        if (StrICmp(DS.ds[i]->ISBN, isbn) == 0) return i;
+int TimDauSachTheoISBN(DS_DauSach *ds, string isbn) {
+    for (int i = 0; i < ds->n; ++i) {
+        if (StrICmp(ds->ds[i]->ISBN.c_str(), isbn.c_str()) == 0) return i;
     }
     return -1;
 }
 
 // [CAU C] CHEN DAU SACH 
-bool ChenDauSachCoThuTu(DS_DauSach& DS, DauSach* dsMoi) {
-    if (DS.n >= MAXSACH) return false;
-    int pos = DS.n;
-    while (pos > 0 && StrICmp(DS.ds[pos - 1]->TenSach, dsMoi->TenSach) > 0) {
-        DS.ds[pos] = DS.ds[pos - 1];
+void ThemDauSach(DS_DauSach *ds, DauSach b) {
+    if (ds->n >= MAXSACH) return;
+    DauSach* pMoi = new DauSach;
+    *pMoi = b;
+    int pos = ds->n;
+    while (pos > 0 && StrICmp(ds->ds[pos - 1]->TenSach.c_str(), pMoi->TenSach.c_str()) > 0) {
+        ds->ds[pos] = ds->ds[pos - 1];
         pos--;
     }
-    DS.ds[pos] = dsMoi;
-    DS.n++;
-    return true;
+    ds->ds[pos] = pMoi;
+    ds->n++;
 }
 
 // [CAU C] TU DONG DANH MA SACH
 void ThemSachChoDauSach(DauSach* ds, int soLuongThem, const char* viTri) {
-    int stt = DemSoSachCuaDauSach(ds->dms) + 1;
+    int stt = DemSoSachCon(ds->dms) + 1;
     PTR_DanhMucSach tail = ds->dms;
     while (tail != nullptr && tail->next != nullptr) tail = tail->next;
 
     for (int i = 0; i < soLuongThem; ++i) {
         PTR_DanhMucSach p = new DanhMucSach;
-        char tmp[64];
-        snprintf(tmp, sizeof(tmp), "%s_%d", ds->ISBN, stt++);
-        strncpy(p->data.MaSach, tmp, sizeof(p->data.MaSach) - 1);
-        p->data.MaSach[sizeof(p->data.MaSach) - 1] = '\0';
+        p->data.MaSach = ds->ISBN + "_" + to_string(stt++);
         p->data.TrangThai = 0;
-        strncpy(p->data.ViTri, viTri, sizeof(p->data.ViTri) - 1);
-        p->data.ViTri[sizeof(p->data.ViTri) - 1] = '\0';
+        p->data.ViTri = viTri;
         p->next = nullptr;
 
         if (tail == nullptr) ds->dms = p;
@@ -514,16 +524,45 @@ void LayISBNTuMaSach(const char* maSach, char* isbnOut, int cap) {
     isbnOut[i] = '\0';
 }
 
-ThongTinSach* TimSachTheoMa(const DS_DauSach& DS, const char* maSach, DauSach*& dauSachChua) {
+PTR_DanhMucSach TimSach(DS_DauSach DS, string MaSach) {
     char isbn[20];
-    LayISBNTuMaSach(maSach, isbn, 20);
-    int idx = TimDauSachTheoISBN(DS, isbn);
+    LayISBNTuMaSach(MaSach.c_str(), isbn, 20);
+    int idx = TimDauSachTheoISBN(&DS, isbn);
     if (idx == -1) return nullptr;
-    dauSachChua = DS.ds[idx];
-    for (PTR_DanhMucSach p = dauSachChua->dms; p != nullptr; p = p->next) {
-        if (StrICmp(p->data.MaSach, maSach) == 0) return &(p->data);
+    for (PTR_DanhMucSach p = DS.ds[idx]->dms; p != nullptr; p = p->next) {
+        if (StrICmp(p->data.MaSach.c_str(), MaSach.c_str()) == 0) return p;
     }
     return nullptr;
+}
+
+// (them) TIM DAU SACH CHUA MOT MA SACH
+DauSach* TimDauSachChuaMaSach(DS_DauSach& DS, string MaSach) {
+    char isbn[20];
+    LayISBNTuMaSach(MaSach.c_str(), isbn, 20);
+    int idx = TimDauSachTheoISBN(&DS, isbn);
+    return (idx == -1) ? nullptr : DS.ds[idx];
+}
+
+void CapNhatSachMuon(PTR_MuonTra &n, string MaSach) {
+    n->data.MaSach = MaSach;
+    n->data.NgayMuon = LayNgayHienTai();
+    n->data.NgayTra = {0, 0, 0};
+    n->data.TrangThai = 0;
+    n->next = NULL;
+}
+
+PTR_MuonTra TimSachDaMuon(PTR_MuonTra &p, string MaSach) {
+    PTR_MuonTra q;
+    PTR_MuonTra pre_q = NULL;
+    for (q = p; q != NULL; q = q->next) {
+        if (MaSach == q->data.MaSach) {
+            pre_q = q;
+            if (q->data.TrangThai == 0) {
+                return q;
+            }
+        }
+    }
+    return pre_q;
 }
 
 const char* TenTrangThaiSach(int t) {
@@ -532,13 +571,23 @@ const char* TenTrangThaiSach(int t) {
     return "Da thanh ly";
 }
 
+string TimTenSach(const DS_DauSach &DS, string MaSach) {
+    for (int i = 0; i < DS.n; i++) {
+        DauSach *p = DS.ds[i];
+        for (PTR_DanhMucSach q = p->dms; q != NULL; q = q->next) {
+            if (q->data.MaSach == MaSach) return p->TenSach;
+        }
+    }
+    return "Khong tim thay";
+}
+
 // ===================== LUU & DOC FILE =====================
 bool SaveDauSach(const DS_DauSach& DS) {
     ofstream out(FILE_DAUSACH);
     if (!out.is_open()) return false;
     out << DS.n << "\n";
     for (int i = 0; i < DS.n; ++i) {
-        int cntDMS = DemSoSachCuaDauSach(DS.ds[i]->dms);
+        int cntDMS = DemSoSachCon(DS.ds[i]->dms);
         out << DS.ds[i]->ISBN << "|" << DS.ds[i]->TenSach << "|"
             << DS.ds[i]->SoTrang << "|" << DS.ds[i]->TacGia << "|"
             << DS.ds[i]->NamXuatBan << "|" << DS.ds[i]->TheLoai << "|"
@@ -551,7 +600,7 @@ bool SaveDauSach(const DS_DauSach& DS) {
     return !out.fail();
 }
 
-void LoadDauSach(DS_DauSach& DS) {
+void ReadDauSach(DS_DauSach *DS) {
     ifstream in(FILE_DAUSACH);
     if (!in.is_open()) return;
     string line;
@@ -564,12 +613,12 @@ void LoadDauSach(DS_DauSach& DS) {
         if (f.size() < 8) break;           // file h?ng -> d?ng
 
         DauSach* p = new DauSach();
-        CopyStr(p->ISBN, sizeof(p->ISBN), f[0]);
-        CopyStr(p->TenSach, sizeof(p->TenSach), f[1]);
+        p->ISBN       = f[0];
+        p->TenSach    = f[1];
         p->SoTrang    = atoi(f[2].c_str());
-        CopyStr(p->TacGia, sizeof(p->TacGia), f[3]);
+        p->TacGia     = f[3];
         p->NamXuatBan = atoi(f[4].c_str());
-        CopyStr(p->TheLoai, sizeof(p->TheLoai), f[5]);
+        p->TheLoai    = f[5];
         p->SoLuotMuon = atoi(f[6].c_str());
         int cntDMS    = atoi(f[7].c_str());
 
@@ -579,17 +628,17 @@ void LoadDauSach(DS_DauSach& DS) {
             MangDong<string> g = Split(line, '|');
             if (g.size() < 3) continue;
             PTR_DanhMucSach nodeS = new DanhMucSach;
-            CopyStr(nodeS->data.MaSach, sizeof(nodeS->data.MaSach), g[0]);
+            nodeS->data.MaSach = g[0];
             nodeS->data.TrangThai = atoi(g[1].c_str());
-            CopyStr(nodeS->data.ViTri, sizeof(nodeS->data.ViTri), g[2]);
+            nodeS->data.ViTri = g[2];
             nodeS->next = nullptr;
             if (tail == nullptr) p->dms = nodeS; else tail->next = nodeS;
             tail = nodeS;
         }
-        if (!ChenDauSachCoThuTu(DS, p)) {
-            GiaiPhongDMS(p->dms);
-            delete p;
-        }
+        int truoc = DS->n;
+        ThemDauSach(DS, *p);
+        if (DS->n == truoc) GiaiPhongDMS(p->dms);   // day -> bo
+        delete p;
     }
     in.close();
 }
@@ -598,8 +647,8 @@ void GhiDocGiaNLR(PTR_TheDocGia root, ofstream& out) {
     if (!root) return;
     int cntMT = 0;
     for (PTR_MuonTra p = root->data.mt; p != nullptr; p = p->next) cntMT++;
-    out << root->data.MaThe << "|" << root->data.Ho << "|" << root->data.Ten << "|"
-        << root->data.Phai << "|" << root->data.TrangThai << "|" << cntMT << "\n";
+    out << root->data.MaThe << "|" << root->data.ho << "|" << root->data.ten << "|"
+        << root->data.phai << "|" << root->data.TrangThaiThe << "|" << cntMT << "\n";
     for (PTR_MuonTra p = root->data.mt; p != nullptr; p = p->next) {
         out << p->data.MaSach << "|"
             << p->data.NgayMuon.Ngay << "|" << p->data.NgayMuon.Thang << "|" << p->data.NgayMuon.Nam << "|"
@@ -638,10 +687,10 @@ void LoadTheDocGia(PTR_TheDocGia& root) {
 
         TheDocGia dg;
         dg.MaThe = atoi(f[0].c_str());
-        CopyStr(dg.Ho, sizeof(dg.Ho), f[1]);
-        CopyStr(dg.Ten, sizeof(dg.Ten), f[2]);
-        CopyStr(dg.Phai, sizeof(dg.Phai), f[3]);
-        dg.TrangThai = atoi(f[4].c_str());
+        CopyStr(dg.ho, sizeof(dg.ho), f[1]);
+        CopyStr(dg.ten, sizeof(dg.ten), f[2]);
+        CopyStr(dg.phai, sizeof(dg.phai), f[3]);
+        dg.TrangThaiThe = atoi(f[4].c_str());
         int cntMT = atoi(f[5].c_str());
         dg.mt = nullptr;
 
@@ -651,9 +700,9 @@ void LoadTheDocGia(PTR_TheDocGia& root) {
             MangDong<string> g = Split(line, '|');
             if (g.size() < 8) continue;
             PTR_MuonTra nodeMT = new DS_MuonTra;
-            CopyStr(nodeMT->data.MaSach, sizeof(nodeMT->data.MaSach), g[0]);
-            nodeMT->data.NgayMuon = NgayThang(atoi(g[1].c_str()), atoi(g[2].c_str()), atoi(g[3].c_str()));
-            nodeMT->data.NgayTra  = NgayThang(atoi(g[4].c_str()), atoi(g[5].c_str()), atoi(g[6].c_str()));
+            nodeMT->data.MaSach = g[0];
+            nodeMT->data.NgayMuon = { atoi(g[1].c_str()), atoi(g[2].c_str()), atoi(g[3].c_str()) };
+            nodeMT->data.NgayTra  = { atoi(g[4].c_str()), atoi(g[5].c_str()), atoi(g[6].c_str()) };
             nodeMT->data.TrangThai = atoi(g[7].c_str());
             nodeMT->next = nullptr;
             if (tail == nullptr) dg.mt = nodeMT; else tail->next = nodeMT;
@@ -815,7 +864,7 @@ bool NhapPhai(int x, int y, const string& label, char* dst, bool allowEmpty) {
         if (s.empty() && allowEmpty) return false;
         if (StrICmp(s.c_str(), "nam") == 0) { strcpy(dst, "Nam"); return true; }
         if (StrICmp(s.c_str(), "nu") == 0 || s == "ná»¯" || s == "Ná»¯" || s == "Ná»®") {
-            strcpy(dst, "Ná»¯");
+            strcpy(dst, "Nu");
             return true;
         }
         thongBao("(!) Chi duoc nhap Nam hoac Nu/Nu co dau!", 12, 900);
@@ -881,6 +930,85 @@ void viewBang(const char* title, const string& subtitle, const int colW[], int n
             return;
         }
     }
+}
+
+// [CAU C]: NHAP SO LUONG + VI TRI VA TU DONG DANH MA SACH
+void SinhMaSach(DauSach &b) {
+    int soLuong;
+    string viTri;
+    NhapSo(3, 28, "So luong sach: ", soLuong, 1, 1000, false);
+    NhapChuoi(3, 29, "Vi tri ke: ", viTri, 29, false);
+    ThemSachChoDauSach(&b, soLuong, viTri.c_str());
+}
+
+// [CAU D]: IN DAU SACH THEO TUNG THE LOAI (TEN TANG DAN)
+void InDS_DauSach(DS_DauSach *ds) {
+        const char* TITLE = "IN DAU SACH THEO TUNG THE LOAI (TEN TANG DAN)";
+        system("cls");
+        drawBanner(25, 2, TITLE);
+        int y = 5;
+
+        MangDong<string> theLoai;
+        for (int i = 0; i < ds->n; ++i) {
+            bool daCo = false;
+            for (size_t j = 0; j < theLoai.size(); ++j)
+                if (StrICmp(ds->ds[i]->TheLoai.c_str(), theLoai[j].c_str()) == 0) { daCo = true; break; }
+            if (!daCo) theLoai.push_back(ds->ds[i]->TheLoai);
+        }
+        sort(theLoai.begin(), theLoai.end(),
+             [](const string& a, const string& b) { return StrICmp(a.c_str(), b.c_str()) < 0; });
+
+        for (size_t t = 0; t < theLoai.size(); ++t) {
+            CheckPage(y, TITLE);
+            setColor(14, 0);
+            gotoxy(5, y++); cout << ">> THE LOAI: " << theLoai[t];
+            setColor(15, 0);
+            for (int i = 0; i < ds->n; ++i) {   // DS DA SAP XEP TANG DAN THEO TEN SACH
+                if (StrICmp(ds->ds[i]->TheLoai.c_str(), theLoai[t].c_str()) != 0) continue;
+                CheckPage(y, TITLE);
+                gotoxy(7, y++);
+                cout << "- [" << ds->ds[i]->ISBN << "] " << ds->ds[i]->TenSach
+                     << " (" << ds->ds[i]->TacGia << ", " << ds->ds[i]->NamXuatBan << ")";
+            }
+            y++;
+        }
+        if (theLoai.empty()) { gotoxy(5, y++); setColor(12, 0); cout << "(!) Chua co dau sach nao!"; }
+        gotoxy(5, y); setColor(10, 0); cout << "Nhan phim bat ky de quay lai...";
+        _getch();
+}
+
+// [CAU E]: TIM THONG TIN SACH THEO TEN SACH
+void TimSachTheoTen(DS_DauSach DS, PTR_DanhMucSach DMS, string TenSach) {
+        const char* TITLE = "KET QUA TIM KIEM THONG TIN SACH THEO TEN";
+        system("cls");
+        drawBanner(20, 2, TITLE);
+        int y = 5;
+        bool found = false;
+        for (int i = 0; i < DS.n; ++i) {
+            if (!ContainsNoCase(DS.ds[i]->TenSach.c_str(), TenSach.c_str())) continue;
+            found = true;
+            CheckPage(y, TITLE);
+            setColor(11, 0);
+            gotoxy(5, y++);
+            cout << "[" << DS.ds[i]->ISBN << "] " << DS.ds[i]->TenSach
+                 << " | Tac gia: " << DS.ds[i]->TacGia
+                 << " | Nam XB: " << DS.ds[i]->NamXuatBan
+                 << " | The loai: " << DS.ds[i]->TheLoai;
+            setColor(15, 0);
+            for (PTR_DanhMucSach q = DS.ds[i]->dms; q != nullptr; q = q->next) {
+                CheckPage(y, TITLE);
+                gotoxy(8, y++);
+                cout << "-> Ma sach: " << left << setw(15) << q->data.MaSach
+                     << " | Trang thai: " << setw(18) << TenTrangThaiSach(q->data.TrangThai)
+                     << " | Vi tri: " << q->data.ViTri;
+            }
+            y++;
+        }
+        if (!found) {
+            gotoxy(5, y++); setColor(12, 0); cout << "(!) Khong tim thay sach nao phu hop!";
+        }
+        gotoxy(5, y + 1); setColor(10, 0); cout << "Nhan phim bat ky de quay lai...";
+        _getch();
 }
 
 // ===================== MAN HINH 1: QUAN LI DAU SACH (CAU C, D, E) =====================
@@ -982,30 +1110,25 @@ void viewDauSach(DS_DauSach& DS) {
                         }
                         break;
                     }
-                    if (TimDauSachTheoISBN(DS, isbn.c_str()) != -1) {
+                    if (TimDauSachTheoISBN(&DS, isbn) != -1) {
                         showCursor(false);
                         thongBao("(!) Ma ISBN nay da ton tai trong he thong!", 12, 1300);
                         clearArea(3, 21, 95, 10);
                         break;
                     }
 
-                    DauSach* p = new DauSach();
-                    CopyStr(p->ISBN, sizeof(p->ISBN), isbn);
+                    DauSach d = DauSach();
+                    d.ISBN = isbn;
                     string s; int v;
-                    NhapChuoi(3, 23, "Ten sach: ", s, 59, false);  CopyStr(p->TenSach, sizeof(p->TenSach), s);
-                    NhapChuoi(3, 24, "Tac gia: ", s, 39, false);   CopyStr(p->TacGia, sizeof(p->TacGia), s);
-                    NhapSo(3, 25, "So trang: ", v, 1, 100000, false);  p->SoTrang = v;
-                    NhapSo(3, 26, "Nam xuat ban: ", v, 1000, LayNgayHienTai().Nam, false);  p->NamXuatBan = v;
-                    NhapChuoi(3, 27, "The loai: ", s, 29, false);  CopyStr(p->TheLoai, sizeof(p->TheLoai), s);
-                    int soLuong;
-                    NhapSo(3, 28, "So luong sach: ", soLuong, 1, 1000, false);
-                    string viTri;
-                    NhapChuoi(3, 29, "Vi tri ke: ", viTri, 29, false);
+                    NhapChuoi(3, 23, "Ten sach: ", s, 59, false);  d.TenSach = s;
+                    NhapChuoi(3, 24, "Tac gia: ", s, 39, false);   d.TacGia = s;
+                    NhapSo(3, 25, "So trang: ", v, 1, 100000, false);  d.SoTrang = v;
+                    NhapSo(3, 26, "Nam xuat ban: ", v, 1000, LayNgayHienTai().Nam, false);  d.NamXuatBan = v;
+                    NhapChuoi(3, 27, "The loai: ", s, 29, false);  d.TheLoai = s;
+                    SinhMaSach(d);
+                    ThemDauSach(&DS, d);
 
-                    ThemSachChoDauSach(p, soLuong, viTri.c_str());
-                    ChenDauSachCoThuTu(DS, p);
-
-                    int pos = TimDauSachTheoISBN(DS, p->ISBN);
+                    int pos = TimDauSachTheoISBN(&DS, d.ISBN);
                     if (pos >= 0) { curPage = pos / LINES_PER_PAGE + 1; curRow = pos % LINES_PER_PAGE; }
 
                     showCursor(false);
@@ -1053,73 +1176,13 @@ void viewDauSach(DS_DauSach& DS) {
                     showCursor(false);
                     if (kw.empty()) { clearArea(3, 21, 95, 10); break; }
 
-                    const char* TITLE = "KET QUA TIM KIEM THONG TIN SACH THEO TEN";
-                    system("cls");
-                    drawBanner(20, 2, TITLE);
-                    int y = 5;
-                    bool found = false;
-                    for (int i = 0; i < DS.n; ++i) {
-                        if (!ContainsNoCase(DS.ds[i]->TenSach, kw.c_str())) continue;
-                        found = true;
-                        CheckPage(y, TITLE);
-                        setColor(11, 0);
-                        gotoxy(5, y++);
-                        cout << "[" << DS.ds[i]->ISBN << "] " << DS.ds[i]->TenSach
-                             << " | Tac gia: " << DS.ds[i]->TacGia
-                             << " | Nam XB: " << DS.ds[i]->NamXuatBan
-                             << " | The loai: " << DS.ds[i]->TheLoai;
-                        setColor(15, 0);
-                        for (PTR_DanhMucSach q = DS.ds[i]->dms; q != nullptr; q = q->next) {
-                            CheckPage(y, TITLE);
-                            gotoxy(8, y++);
-                            cout << "-> Ma sach: " << left << setw(15) << q->data.MaSach
-                                 << " | Trang thai: " << setw(18) << TenTrangThaiSach(q->data.TrangThai)
-                                 << " | Vi tri: " << q->data.ViTri;
-                        }
-                        y++;
-                    }
-                    if (!found) {
-                        gotoxy(5, y++); setColor(12, 0); cout << "(!) Khong tim thay sach nao phu hop!";
-                    }
-                    gotoxy(5, y + 1); setColor(10, 0); cout << "Nhan phim bat ky de quay lai...";
-                    _getch();
+                    TimSachTheoTen(DS, NULL, kw);
                     drawStatic();
                     break;
                 }
 
                 case KEY_F5: { // CAU D: IN DAU SACH THEO TUNG THE LOAI
-                    const char* TITLE = "IN DAU SACH THEO TUNG THE LOAI (TEN TANG DAN)";
-                    system("cls");
-                    drawBanner(25, 2, TITLE);
-                    int y = 5;
-
-                    MangDong<string> theLoai;
-                    for (int i = 0; i < DS.n; ++i) {
-                        bool daCo = false;
-                        for (size_t j = 0; j < theLoai.size(); ++j)
-                            if (StrICmp(DS.ds[i]->TheLoai, theLoai[j].c_str()) == 0) { daCo = true; break; }
-                        if (!daCo) theLoai.push_back(DS.ds[i]->TheLoai);
-                    }
-                    sort(theLoai.begin(), theLoai.end(),
-                         [](const string& a, const string& b) { return StrICmp(a.c_str(), b.c_str()) < 0; });
-
-                    for (size_t t = 0; t < theLoai.size(); ++t) {
-                        CheckPage(y, TITLE);
-                        setColor(14, 0);
-                        gotoxy(5, y++); cout << ">> THE LOAI: " << theLoai[t];
-                        setColor(15, 0);
-                        for (int i = 0; i < DS.n; ++i) {   // DS DA SAP XEP TANG DAN THEO TEN SACH
-                            if (StrICmp(DS.ds[i]->TheLoai, theLoai[t].c_str()) != 0) continue;
-                            CheckPage(y, TITLE);
-                            gotoxy(7, y++);
-                            cout << "- [" << DS.ds[i]->ISBN << "] " << DS.ds[i]->TenSach
-                                 << " (" << DS.ds[i]->TacGia << ", " << DS.ds[i]->NamXuatBan << ")";
-                        }
-                        y++;
-                    }
-                    if (theLoai.empty()) { gotoxy(5, y++); setColor(12, 0); cout << "(!) Chua co dau sach nao!"; }
-                    gotoxy(5, y); setColor(10, 0); cout << "Nhan phim bat ky de quay lai...";
-                    _getch();
+                    InDS_DauSach(&DS);
                     drawStatic();
                     break;
                 }
@@ -1136,6 +1199,127 @@ void viewDauSach(DS_DauSach& DS) {
 }
 
 // ===================== MAN HINH 2: QUAN LI THE DOC GIA (CAU A, B) =====================
+int g_MaTheThaoTac = -1;   // ma the vua them / sua, de bang nhay toi dong do
+
+// [CAU A]: THEM THE DOC GIA
+void ThemTheDocGia(PTR_TheDocGia& root) {
+    showCursor(true);
+    clearArea(3, 21, 95, 10);
+    setColor(14, 0);
+    gotoxy(3, 21); cout << "--- THEM THE DOC GIA MOI ---";
+    TheDocGia dg;
+    dg.MaThe = SinhMaThe(root);
+    if (dg.MaThe == -1) {
+        showCursor(false);
+        thongBao("(!) Da het kho ma the co the cap!", 12, 1200);
+        return;
+    }
+    gotoxy(3, 22); cout << "Ma the (tu dong): " << dg.MaThe;
+    string s;
+    NhapChuoi(3, 23, "Ho: ", s, 39, false);  CopyStr(dg.ho, sizeof(dg.ho), s);
+    NhapChuoi(3, 24, "Ten: ", s, 19, false); CopyStr(dg.ten, sizeof(dg.ten), s);
+    NhapPhai(3, 25, "Phai (Nam/Nu): ", dg.phai, false);
+    dg.TrangThaiThe = 1;
+    dg.mt = nullptr;
+    g_MaTheThaoTac = dg.MaThe;
+    InsertDocGia(root, dg);
+
+    showCursor(false);
+    clearArea(3, 21, 95, 10);
+    thongBao("=> Them doc gia thanh cong! (nho nhan F2 de luu)", 10, 1000);
+}
+
+// [CAU A]: HIEU CHINH THE DOC GIA
+void HieuChinhDocGia(PTR_TheDocGia root) {
+    showCursor(true);
+    clearArea(3, 21, 95, 10);
+    setColor(14, 0);
+    gotoxy(3, 21); cout << "--- HIEU CHINH THE DOC GIA ---";
+    int maThe;
+    if (!NhapSo(3, 22, "Nhap ma the can chinh (Enter de huy): ", maThe, 1, 999999999, true)) {
+        showCursor(false);
+        clearArea(3, 21, 95, 10);
+        return;
+    }
+    PTR_TheDocGia p = SearchDocGia(root, maThe);
+    if (!p) {
+        showCursor(false);
+        clearArea(3, 21, 95, 10);
+        thongBao("(!) Khong tim thay ma the!", 12, 1000);
+        return;
+    }
+    TheDocGia* d = &(p->data);
+    clearArea(3, 21, 95, 10);
+    setColor(14, 0);
+    gotoxy(3, 21); cout << "--- HIEU CHINH DOC GIA MA THE: " << d->MaThe << " (Enter = giu nguyen) ---";
+    string s;
+    NhapChuoi(3, 22, string("Ho [") + d->ho + "]: ", s, 39, true);
+    if (!s.empty()) CopyStr(d->ho, sizeof(d->ho), s);
+    NhapChuoi(3, 23, string("Ten [") + d->ten + "]: ", s, 19, true);
+    if (!s.empty()) CopyStr(d->ten, sizeof(d->ten), s);
+    NhapPhai(3, 24, string("Phai [") + d->phai + "] (Nam/Nu): ", d->phai, true);
+    int tt;
+    if (NhapSo(3, 25, "Trang thai the (0: Khoa, 1: Hoat dong) [" + to_string(d->TrangThaiThe) + "]: ", tt, 0, 1, true))
+        d->TrangThaiThe = tt;
+
+    g_MaTheThaoTac = d->MaThe;
+    showCursor(false);
+    clearArea(3, 21, 95, 10);
+}
+
+// [CAU A]: XOA THE DOC GIA
+void XoaDocGia(PTR_TheDocGia &root) {
+    showCursor(true);
+    clearArea(3, 21, 95, 10);
+    setColor(14, 0);
+    gotoxy(3, 21); cout << "--- XOA THE DOC GIA ---";
+    int maThe;
+    if (!NhapSo(3, 22, "Nhap ma the can xoa (Enter de huy): ", maThe, 1, 999999999, true)) {
+        showCursor(false);
+        clearArea(3, 21, 95, 10);
+        return;
+    }
+    showCursor(false);
+    if (TimMaThe(root, maThe) == nullptr) {
+        clearArea(3, 21, 95, 10);
+        thongBao("(!) Khong tim thay ma the!", 12, 1000);
+        return;
+    }
+    if (HoiYN(3, 23, "Ban co chac muon xoa the doc gia " + to_string(maThe) + "?")) {
+        clearArea(3, 21, 95, 10);
+        if (DelDocGia(root, maThe)) thongBao("=> Da xoa the doc gia thanh cong!", 10, 1000);
+        else thongBao("(!) Doc gia dang muon sach, khong xoa duoc!", 12, 1300);
+    }
+    clearArea(3, 21, 95, 10);
+}
+
+// [CAU B]: IN DANH SACH DOC GIA THEO TEN + HO TANG DAN
+void InDS_DocGia(PTR_TheDocGia root) {
+    TheDocGia* arr[MAXDOCGIA];
+    int count = 0;
+    chuyenCayVaoMang(root, arr, count);
+    stable_sort(arr, arr + count, [](const TheDocGia* a, const TheDocGia* b) {
+        int c = StrICmp(a->ten, b->ten);
+        if (c != 0) return c < 0;
+        return StrICmp(a->ho, b->ho) < 0;
+    });
+
+    MangDong<Row> rows;
+    for (int i = 0; i < count; ++i) {
+        Row r;
+        r.push_back(to_string(i + 1));
+        r.push_back(to_string(arr[i]->MaThe));
+        r.push_back(arr[i]->ho);
+        r.push_back(arr[i]->ten);
+        r.push_back(arr[i]->phai);
+        r.push_back(arr[i]->TrangThaiThe == 1 ? "Hoat dong" : "Bi khoa");
+        rows.push_back(r);
+    }
+    int colW[] = { 6, 15, 28, 15, 8, 18 };
+    const char* const hd[] = { "STT", "MA THE", "HO", "TEN", "PHAI", "TRANG THAI" };
+    viewBang("DANH SACH DOC GIA (TEN + HO TANG DAN)", "", colW, 6, hd, rows);
+}
+
 void viewTheDocGia(PTR_TheDocGia& root) {
     int colW[] = { 6, 15, 28, 15, 8, 18 };
     const int nc = 6;
@@ -1144,27 +1328,30 @@ void viewTheDocGia(PTR_TheDocGia& root) {
     header.push_back("TEN");  header.push_back("PHAI");   header.push_back("TRANG THAI");
 
     Hint hints[] = { {"ESC", "Exit"}, {"F2", "Save"}, {"INS", "Them"}, {"F3", "Sua"},
-                     {"DEL", "Xoa"}, {"F5", "Xep Ten / Ma"} };
+                     {"DEL", "Xoa"}, {"F5", "Xep Ten / Ma"}, {"F6", "In DS"} };
 
-    showCursor(false);
-    system("cls");
-    drawBanner(25, 2, "DANH SACH THE DOC GIA (CAY NHI PHAN TIM KIEM BST)");
-    drawTableFrame(3, 4, colW, nc, LINES_PER_PAGE);
-    drawRow(3, 5, colW, nc, header, 15, 0);
-    drawNavigationGuide(104, 8);
-    drawHints(19, hints, 6);
+    auto drawStatic = [&]() {
+        showCursor(false);
+        system("cls");
+        drawBanner(25, 2, "DANH SACH THE DOC GIA (CAY NHI PHAN TIM KIEM BST)");
+        drawTableFrame(3, 4, colW, nc, LINES_PER_PAGE);
+        drawRow(3, 5, colW, nc, header, 15, 0);
+        drawNavigationGuide(104, 8);
+        drawHints(19, hints, 7);
+    };
 
-    MangDong<TheDocGia*> arr;
+    TheDocGia* arr[MAXDOCGIA];
+    int tong = 0;
     bool sortByName = false;
 
     auto rebuild = [&]() {
-        arr.clear();
-        ChuyenCayVaoMang(root, arr);
+        tong = 0;
+        chuyenCayVaoMang(root, arr, tong);
         if (sortByName) {
-            stable_sort(arr.begin(), arr.end(), [](const TheDocGia* a, const TheDocGia* b) {
-                int c = StrICmp(a->Ten, b->Ten);
+            stable_sort(arr, arr + tong, [](const TheDocGia* a, const TheDocGia* b) {
+                int c = StrICmp(a->ten, b->ten);
                 if (c != 0) return c < 0;
-                return StrICmp(a->Ho, b->Ho) < 0;
+                return StrICmp(a->ho, b->ho) < 0;
             });
         }
     };
@@ -1172,17 +1359,23 @@ void viewTheDocGia(PTR_TheDocGia& root) {
     auto getRow = [&](int idx, Row& c) {
         c[0] = to_string(idx + 1);
         c[1] = to_string(arr[idx]->MaThe);
-        c[2] = arr[idx]->Ho;
-        c[3] = arr[idx]->Ten;
-        c[4] = arr[idx]->Phai;
-        c[5] = (arr[idx]->TrangThai == 1) ? "Hoat dong" : "Bi khoa";
+        c[2] = arr[idx]->ho;
+        c[3] = arr[idx]->ten;
+        c[4] = arr[idx]->phai;
+        c[5] = (arr[idx]->TrangThaiThe == 1) ? "Hoat dong" : "Bi khoa";
     };
 
-    rebuild();
     int curPage = 1, curRow = 0;
+    auto nhayToiMaThe = [&](int ma) {
+        for (int i = 0; i < tong; ++i)
+            if (arr[i]->MaThe == ma) { curPage = i / LINES_PER_PAGE + 1; curRow = i % LINES_PER_PAGE; break; }
+    };
+
+    drawStatic();
+    rebuild();
 
     while (true) {
-        int total = (int)arr.size();
+        int total = tong;
         int totalPages = CalcPages(total);
         if (curPage > totalPages) curPage = totalPages;
         if (curPage < 1) curPage = 1;
@@ -1218,76 +1411,24 @@ void viewTheDocGia(PTR_TheDocGia& root) {
                     if (curPage < totalPages) { curPage++; curRow = 0; }
                     break;
 
-                case KEY_INSERT: { // [CAU A]: THEM THE DOC GIA
-                    showCursor(true);
-                    clearArea(3, 21, 95, 10);
-                    setColor(14, 0);
-                    gotoxy(3, 21); cout << "--- THEM THE DOC GIA MOI ---";
-                    TheDocGia dg;
-                    dg.MaThe = SinhMaThe(root);
-                    if (dg.MaThe == -1) {
-                        showCursor(false);
-                        thongBao("(!) Da het kho ma the co the cap!", 12, 1200);
-                        break;
-                    }
-                    gotoxy(3, 22); cout << "Ma the (tu dong): " << dg.MaThe;
-                    string s;
-                    NhapChuoi(3, 23, "Ho: ", s, 39, false);  CopyStr(dg.Ho, sizeof(dg.Ho), s);
-                    NhapChuoi(3, 24, "Ten: ", s, 19, false); CopyStr(dg.Ten, sizeof(dg.Ten), s);
-                    NhapPhai(3, 25, "Phai (Nam/Nu): ", dg.Phai, false);
-                    dg.TrangThai = 1;
-                    dg.mt = nullptr;
-                    int newMa = dg.MaThe;
-                    InsertDocGia(root, dg);
-
+                case KEY_INSERT: // [CAU A]: THEM THE DOC GIA
+                    g_MaTheThaoTac = -1;
+                    ThemTheDocGia(root);
                     rebuild();
-                    for (size_t i = 0; i < arr.size(); ++i)
-                        if (arr[i]->MaThe == newMa) { curPage = (int)i / LINES_PER_PAGE + 1; curRow = (int)i % LINES_PER_PAGE; break; }
-
-                    showCursor(false);
-                    clearArea(3, 21, 95, 10);
-                    thongBao("=> Them doc gia thanh cong! (nho nhan F2 de luu)", 10, 1000);
+                    nhayToiMaThe(g_MaTheThaoTac);
                     break;
-                }
 
-                case KEY_DELETE: { // [CAU A]: XOA THE DOC GIA
-                    if (itemsOnPage == 0) break;
-                    int maXoa = arr[startIdx + curRow]->MaThe;
-                    if (HoiYN(3, 21, "Ban co chac muon xoa the doc gia " + to_string(maXoa) + "?")) {
-                        clearArea(3, 21, 95, 1);
-                        if (DelDocGia(root, maXoa)) thongBao("=> Da xoa the doc gia thanh cong!", 10, 1000);
-                        else thongBao("(!) Doc gia dang muon sach, khong xoa duoc!", 12, 1300);
-                        rebuild();
-                    }
-                    clearArea(3, 21, 95, 1);
+                case KEY_DELETE: // [CAU A]: XOA THE DOC GIA
+                    XoaDocGia(root);
+                    rebuild();
                     break;
-                }
 
-                case KEY_F3: { // [CAU A]: HIEU CHINH THE DOC GIA
-                    if (itemsOnPage == 0) break;
-                    TheDocGia* d = arr[startIdx + curRow];
-                    showCursor(true);
-                    clearArea(3, 21, 95, 10);
-                    setColor(14, 0);
-                    gotoxy(3, 21); cout << "--- HIEU CHINH DOC GIA MA THE: " << d->MaThe << " (Enter = giu nguyen) ---";
-                    string s;
-                    NhapChuoi(3, 22, string("Ho [") + d->Ho + "]: ", s, 39, true);
-                    if (!s.empty()) CopyStr(d->Ho, sizeof(d->Ho), s);
-                    NhapChuoi(3, 23, string("Ten [") + d->Ten + "]: ", s, 19, true);
-                    if (!s.empty()) CopyStr(d->Ten, sizeof(d->Ten), s);
-                    NhapPhai(3, 24, string("Phai [") + d->Phai + "] (Nam/Nu): ", d->Phai, true);
-                    int tt;
-                    if (NhapSo(3, 25, "Trang thai the (0: Khoa, 1: Hoat dong) [" + to_string(d->TrangThai) + "]: ", tt, 0, 1, true))
-                        d->TrangThai = tt;
-
-                    showCursor(false);
-                    clearArea(3, 21, 95, 10);
-                    int ma = d->MaThe;
-                    rebuild();   // Tï¿½n/H? cï¿½ th? d?i -> s?p x?p l?i
-                    for (size_t i = 0; i < arr.size(); ++i)
-                        if (arr[i]->MaThe == ma) { curPage = (int)i / LINES_PER_PAGE + 1; curRow = (int)i % LINES_PER_PAGE; break; }
+                case KEY_F3: // [CAU A]: HIEU CHINH THE DOC GIA
+                    g_MaTheThaoTac = -1;
+                    HieuChinhDocGia(root);
+                    rebuild();   // Ten/Ho co the doi -> sap xep lai
+                    nhayToiMaThe(g_MaTheThaoTac);
                     break;
-                }
 
                 case KEY_F2:
                     if (SaveTheDocGia(root)) thongBao("Da luu vao file THEDOCGIA.TXT thanh cong!", 10, 900);
@@ -1299,6 +1440,11 @@ void viewTheDocGia(PTR_TheDocGia& root) {
                     rebuild();
                     curPage = 1; curRow = 0;
                     break;
+
+                case KEY_F6: // CAU B: IN DANH SACH DOC GIA
+                    InDS_DocGia(root);
+                    drawStatic();
+                    break;
             }
         } else if (ch == KEY_ESC) {
             return;
@@ -1307,22 +1453,34 @@ void viewTheDocGia(PTR_TheDocGia& root) {
 }
 
 // ===================== MAN HINH 3: MUON TRA SACH (CAU F, G, H) =====================
-void viewMuonTra(PTR_TheDocGia root, DS_DauSach& DS) {
-    system("cls");
-    drawBanner(25, 2, "NGHIEP VU MUON - TRA SACH");
-    showCursor(true);
+// IN LICH SU MUON TRA CUA 1 DOC GIA (dong thoi dem so sach dang muon)
+void InDS_MuonTra(PTR_TheDocGia &p, int &BookSum) {
+    MangDong<Row> rows;
+    int stt = 1;
+    for (PTR_MuonTra q = p->data.mt; q != NULL; q = q->next) {
+        Row r;
+        r.push_back(to_string(stt++));
+        r.push_back(q->data.MaSach);
+        r.push_back(DateStr(q->data.NgayMuon));
+        r.push_back(q->data.TrangThai == 0 ? string("Chua tra") : DateStr(q->data.NgayTra));
+        if (q->data.TrangThai == 0)      { r.push_back("Dang muon"); BookSum++; }
+        else if (q->data.TrangThai == 1) r.push_back("Da tra");
+        else                             r.push_back("Lam mat sach");
+        rows.push_back(r);
+    }
+    int colW[] = { 6, 20, 15, 15, 18 };
+    const char* const hd[] = { "STT", "MA SACH", "NGAY MUON", "NGAY TRA", "TRANG THAI" };
+    string sub = string("Ma the: ") + to_string(p->data.MaThe) + " | Doc gia: " + p->data.ho + " " + p->data.ten;
+    viewBang("LICH SU MUON TRA CUA DOC GIA", sub, colW, 5, hd, rows);
+}
 
-    int maThe;
-    if (!NhapSo(5, 5, "NHAP MA THE DOC GIA (Enter de quay lai): ", maThe, 1, 999999999, true)) {
-        showCursor(false);
-        return;
-    }
-    PTR_TheDocGia pDG = TimMaThe(root, maThe);
-    if (!pDG) {
-        showCursor(false);
-        thongBao("(!) KHONG TIM THAY MA THE!", 12, 1200);
-        return;
-    }
+// [CAU H]: VE BANG CAC SACH DANG MUON CUA 1 DOC GIA
+void InDS_Muon(PTR_TheDocGia p, DS_DauSach DS) {
+    NgayThang today = LayNgayHienTai();
+    MangDong<PTR_MuonTra> loans;
+    for (PTR_MuonTra q = p->data.mt; q != nullptr; q = q->next)
+        if (q->data.TrangThai == 0) loans.push_back(q);
+    int cntMuon = (int)loans.size();
 
     int colMT[] = { 6, 18, 35, 15, 15 };
     const int nc = 5;
@@ -1331,114 +1489,183 @@ void viewMuonTra(PTR_TheDocGia root, DS_DauSach& DS) {
     header.push_back("STT"); header.push_back("MA SACH"); header.push_back("TEN SACH");
     header.push_back("NGAY MUON"); header.push_back("TINH TRANG");
 
+    clearArea(0, 4, 118, 20);
+    setColor(11, 0);
+    gotoxy(5, 4);
+    cout << "Ma the: " << p->data.MaThe << " | Doc gia: " << p->data.ho << " " << p->data.ten
+         << " | Phai: " << p->data.phai
+         << " | Trang thai: " << (p->data.TrangThaiThe == 1 ? "Hoat dong" : "BI KHOA");
+
+    drawTableFrame(5, 6, colMT, nc, rowsMT);
+    drawRow(5, 7, colMT, nc, header, 15, 0);
+    drawBody(5, 9, colMT, nc, cntMuon, 0, rowsMT, -1, [&](int idx, Row& c) {
+        int days = SoNgay(loans[idx]->data.NgayMuon, today);
+        c[0] = to_string(idx + 1);
+        c[1] = loans[idx]->data.MaSach;
+        c[2] = TimTenSach(DS, loans[idx]->data.MaSach);
+        c[3] = DateStr(loans[idx]->data.NgayMuon);
+        c[4] = (days > HAN_MUON_NGAY) ? "QUA HAN!" : "Binh thuong";
+    });
+    setColor(15, 0);
+}
+
+// [CAU H]: LIET KE SACH DANG MUON THEO MA THE
+void LietKeSachMuon(int Mathe, PTR_TheDocGia &root, DS_DauSach DS) {
+    PTR_TheDocGia p = SearchDocGia(root, Mathe);
+    if (p == NULL) {
+        thongBao("(!) KHONG TIM THAY MA THE!", 12, 1200);
+        return;
+    }
+    system("cls");
+    drawBanner(25, 2, "SACH DANG MUON CUA DOC GIA");
+    InDS_Muon(p, DS);
+    gotoxy(5, 17); setColor(10, 0);
+    cout << "Nhan phim bat ky de quay lai...";
+    setColor(15, 0);
+    _getch();
+}
+
+// (them) NHAP MA THE VA TIM DOC GIA, tra ve nullptr neu huy / khong thay
+PTR_TheDocGia NhapMaTheDocGia(PTR_TheDocGia &root) {
+    showCursor(true);
+    int maThe;
+    if (!NhapSo(5, 5, "NHAP MA THE DOC GIA (Enter de quay lai): ", maThe, 1, 999999999, true)) {
+        showCursor(false);
+        return nullptr;
+    }
+    showCursor(false);
+    PTR_TheDocGia p = TimMaThe(root, maThe);
+    if (!p) thongBao("(!) KHONG TIM THAY MA THE!", 12, 1200);
+    return p;
+}
+
+// [CAU F]: MUON SACH
+void MuonSach(PTR_TheDocGia &root, DS_DauSach &DS) {
+    system("cls");
+    drawBanner(25, 2, "MUON SACH");
+    PTR_TheDocGia p = NhapMaTheDocGia(root);
+    if (p == nullptr) return;
+
     while (true) {
-        NgayThang today = LayNgayHienTai();
+        InDS_Muon(p, DS);
+        int cntMuon = 0;
+        for (PTR_MuonTra q = p->data.mt; q != nullptr; q = q->next)
+            if (q->data.TrangThai == 0) cntMuon++;
 
-        // [CAU H]: DANH SACH CAC SACH DANG MUON
-        MangDong<PTR_MuonTra> loans;
-        bool quaHan = false;
-        for (PTR_MuonTra p = pDG->data.mt; p != nullptr; p = p->next) {
-            if (p->data.TrangThai != 0) continue;
-            loans.push_back(p);
-            if (SoNgay(p->data.NgayMuon, today) > HAN_MUON_NGAY) quaHan = true;
+        if (p->data.TrangThaiThe == 0) { thongBao("(!) The bi khoa, khong duoc phep muon!", 12, 1500); return; }
+        if (coQuaHan(p) == 1) { thongBao("(!) Doc gia giu sach qua 7 ngay, bi chan muon!", 12, 1500); return; }
+        if (cntMuon >= MAX_MUON_SACH) { thongBao("(!) Da muon toi da 3 cuon sach!", 12, 1500); return; }
+
+        showCursor(true);
+        string maSach;
+        NhapChuoi(5, 18, "Nhap Ma Sach muon muon (Enter de huy): ", maSach, 29, true);
+        showCursor(false);
+        if (maSach.empty()) return;
+        ToUpper(maSach);
+
+        PTR_DanhMucSach sach = TimSach(DS, maSach);
+        if (!sach) { thongBao("(!) Ma sach khong ton tai!", 12, 1200); continue; }
+        if (sach->data.TrangThai != 0) { thongBao("(!) Sach khong co san de cho muon!", 12, 1200); continue; }
+
+        DauSach* dauSach = TimDauSachChuaMaSach(DS, maSach);
+        sach->data.TrangThai = 1;
+        if (dauSach) dauSach->SoLuotMuon++;
+        PTR_MuonTra nMT = new DS_MuonTra;
+        CapNhatSachMuon(nMT, sach->data.MaSach);
+        nMT->next = p->data.mt;
+        p->data.mt = nMT;
+
+        thongBao("=> CHO MUON THANH CONG!", 10, 1200);
+    }
+}
+
+// [CAU G]: TRA SACH
+void TraSach(PTR_TheDocGia &root, DS_DauSach &DS) {
+    system("cls");
+    drawBanner(25, 2, "TRA SACH");
+    PTR_TheDocGia p = NhapMaTheDocGia(root);
+    if (p == nullptr) return;
+
+    while (true) {
+        InDS_Muon(p, DS);
+        bool coMuon = false;
+        for (PTR_MuonTra q = p->data.mt; q != nullptr; q = q->next)
+            if (q->data.TrangThai == 0) { coMuon = true; break; }
+        if (!coMuon) { thongBao("(!) Doc gia khong giu cuon sach nao!", 12, 1200); return; }
+
+        showCursor(true);
+        string maSach;
+        NhapChuoi(5, 18, "Nhap Ma Sach can tra (Enter de huy): ", maSach, 29, true);
+        showCursor(false);
+        if (maSach.empty()) return;
+        ToUpper(maSach);
+
+        PTR_MuonTra curMT = TimSachDaMuon(p->data.mt, maSach);
+        if (curMT == nullptr || curMT->data.TrangThai != 0) {
+            thongBao("(!) Doc gia khong dang muon cuon sach nay!", 12, 1200);
+            continue;
         }
-        int cntMuon = (int)loans.size();
+        PTR_DanhMucSach sach = TimSach(DS, curMT->data.MaSach);
 
+        gotoxy(5, 19); setColor(14, 0);
+        cout << "Hinh thuc: [1] Tra binh thuong   [2] Lam mat sach   [ESC] Huy: ";
+        setColor(15, 0);
+        int ht = _getch();
+        if (ht != '1' && ht != '2') continue;
+
+        curMT->data.NgayTra = LayNgayHienTai();
+        if (ht == '2') {
+            curMT->data.TrangThai = 2;               // LAM MAT
+            if (sach) sach->data.TrangThai = 2;      // THANH LY
+        } else {
+            curMT->data.TrangThai = 1;               // DA TRA
+            if (sach) sach->data.TrangThai = 0;      // TRA VE KHO
+        }
+        thongBao("=> GHI NHAN TRA SACH THANH CONG!", 10, 1200);
+    }
+}
+
+void viewMuonTra(PTR_TheDocGia &root, DS_DauSach &DS) {
+    while (true) {
         showCursor(false);
         system("cls");
         drawBanner(25, 2, "NGHIEP VU MUON - TRA SACH");
-        setColor(11, 0);
-        gotoxy(5, 4);
-        cout << "Ma the: " << pDG->data.MaThe << " | Doc gia: " << pDG->data.Ho << " " << pDG->data.Ten
-             << " | Phai: " << pDG->data.Phai
-             << " | Trang thai: " << (pDG->data.TrangThai == 1 ? "Hoat dong" : "BI KHOA");
-
-        drawTableFrame(5, 6, colMT, nc, rowsMT);
-        drawRow(5, 7, colMT, nc, header, 15, 0);
-        drawBody(5, 9, colMT, nc, cntMuon, 0, rowsMT, -1, [&](int idx, Row& c) {
-            DauSach* dSach = nullptr;
-            TimSachTheoMa(DS, loans[idx]->data.MaSach, dSach);
-            int days = SoNgay(loans[idx]->data.NgayMuon, today);
-            c[0] = to_string(idx + 1);
-            c[1] = loans[idx]->data.MaSach;
-            c[2] = dSach ? dSach->TenSach : "Unknown";
-            c[3] = DateStr(loans[idx]->data.NgayMuon);
-            c[4] = (days > HAN_MUON_NGAY) ? "QUA HAN!" : "Binh thuong";
-        });
-
-        gotoxy(5, 16); setColor(14, 0);
-        cout << "CHON THAO TAC: [1] Muon sach   [2] Tra sach   [ESC] Quay lai";
+        setColor(14, 0);
+        gotoxy(5, 5);  cout << "[1] Muon sach";
+        gotoxy(5, 7);  cout << "[2] Tra sach";
+        gotoxy(5, 9);  cout << "[3] Liet ke sach dang muon cua doc gia";
+        gotoxy(5, 11); cout << "[4] Lich su muon tra cua doc gia";
+        gotoxy(5, 13); cout << "[ESC] Quay lai";
         setColor(15, 0);
+
         int opt = _getch();
-        if (opt == KEY_ESC) { showCursor(false); return; }
-
-        if (opt == '1') { // [CAU F] MUON SACH
-            if (pDG->data.TrangThai == 0) { thongBao("(!) The bi khoa, khong duoc phep muon!", 12, 1500); continue; }
-            if (quaHan) { thongBao("(!) Doc gia giu sach qua 7 ngay, bi chan muon!", 12, 1500); continue; }
-            if (cntMuon >= MAX_MUON_SACH) { thongBao("(!) Da muon toi da 3 cuon sach!", 12, 1500); continue; }
-
+        if (opt == KEY_ESC) return;
+        if (opt == '1') MuonSach(root, DS);
+        else if (opt == '2') TraSach(root, DS);
+        else if (opt == '3' || opt == '4') {
+            system("cls");
+            drawBanner(25, 2, "NGHIEP VU MUON - TRA SACH");
             showCursor(true);
-            string maSach;
-            NhapChuoi(5, 18, "Nhap Ma Sach muon muon (Enter de huy): ", maSach, 29, true);
+            int maThe;
+            if (!NhapSo(5, 5, "NHAP MA THE DOC GIA (Enter de quay lai): ", maThe, 1, 999999999, true)) continue;
             showCursor(false);
-            if (maSach.empty()) continue;
-            ToUpper(maSach);
-
-            DauSach* dauSach = nullptr;
-            ThongTinSach* sach = TimSachTheoMa(DS, maSach.c_str(), dauSach);
-            if (!sach) { thongBao("(!) Ma sach khong ton tai!", 12, 1200); continue; }
-            if (sach->TrangThai != 0) { thongBao("(!) Sach khong co san de cho muon!", 12, 1200); continue; }
-
-            sach->TrangThai = 1;
-            dauSach->SoLuotMuon++;
-            PTR_MuonTra nMT = new DS_MuonTra;
-            CopyStr(nMT->data.MaSach, sizeof(nMT->data.MaSach), sach->MaSach);
-            nMT->data.NgayMuon = today;
-            nMT->data.NgayTra = NgayThang(0, 0, 0);
-            nMT->data.TrangThai = 0;
-            nMT->next = pDG->data.mt;
-            pDG->data.mt = nMT;
-
-            thongBao("=> CHO MUON THANH CONG!", 10, 1200);
-        } else if (opt == '2') { // [CAU G] TRA SACH
-            if (cntMuon == 0) { thongBao("(!) Doc gia khong giu cuon sach nao!", 12, 1200); continue; }
-
-            showCursor(true);
-            string maSach;
-            NhapChuoi(5, 18, "Nhap Ma Sach can tra (Enter de huy): ", maSach, 29, true);
-            showCursor(false);
-            if (maSach.empty()) continue;
-            ToUpper(maSach);
-
-            PTR_MuonTra curMT = nullptr;
-            for (size_t i = 0; i < loans.size(); ++i) {
-                if (StrICmp(loans[i]->data.MaSach, maSach.c_str()) == 0) { curMT = loans[i]; break; }
-            }
-            if (!curMT) { thongBao("(!) Doc gia khong dang muon cuon sach nay!", 12, 1200); continue; }
-
-            DauSach* dauSach = nullptr;
-            ThongTinSach* sach = TimSachTheoMa(DS, curMT->data.MaSach, dauSach);
-
-            gotoxy(5, 19); setColor(14, 0);
-            cout << "Hinh thuc: [1] Tra binh thuong   [2] Lam mat sach   [ESC] Huy: ";
-            setColor(15, 0);
-            int ht = _getch();
-            if (ht != '1' && ht != '2') continue;
-
-            curMT->data.NgayTra = today;
-            if (ht == '2') {
-                curMT->data.TrangThai = 2;      // LAM M?T
-                if (sach) sach->TrangThai = 2;  // Thanh lY
+            if (opt == '3') {
+                LietKeSachMuon(maThe, root, DS);
             } else {
-                curMT->data.TrangThai = 1;      // DA TRA
-                if (sach) sach->TrangThai = 0;  // TRA VE KHO
+                PTR_TheDocGia p = SearchDocGia(root, maThe);
+                if (!p) thongBao("(!) KHONG TIM THAY MA THE!", 12, 1200);
+                else { int BookSum = 0; InDS_MuonTra(p, BookSum); }
             }
-            thongBao("=> GHI NHAN TRA SACH THANH CONG!", 10, 1200);
         }
     }
 }
 
 // ===================== MAN HINH 4: THONG KE QUA HAN & TOP 10(CAU I,J) =====================
+struct DGQuaHan {
+    PTR_TheDocGia docgia;
+    int TongNgayQuaHan;
+};
+
 struct QuaHanRecord {
     int MaThe;
     string HoTen;
@@ -1457,7 +1684,7 @@ void DuyetQuaHan(PTR_TheDocGia root, MangDong<QuaHanRecord>& arr, NgayThang toda
             if (days > HAN_MUON_NGAY) {
                 QuaHanRecord r;
                 r.MaThe = root->data.MaThe;
-                r.HoTen = string(root->data.Ho) + " " + root->data.Ten;
+                r.HoTen = string(root->data.ho) + " " + root->data.ten;
                 r.MaSach = p->data.MaSach;
                 r.NgayMuon = p->data.NgayMuon;
                 r.SoNgayTre = days - HAN_MUON_NGAY;
@@ -1469,7 +1696,45 @@ void DuyetQuaHan(PTR_TheDocGia root, MangDong<QuaHanRecord>& arr, NgayThang toda
     DuyetQuaHan(root->right, arr, today);
 }
 
-void viewQuaHan(PTR_TheDocGia root) {
+// TONG SO NGAY QUA HAN CUA CAC SACH DANG MUON
+int ThoiGianMuon(PTR_MuonTra &mt) {
+    NgayThang NgayHienTai = LayNgayHienTai();
+    int SoNgayQuaHan = 0;
+    for (PTR_MuonTra p = mt; p != NULL; p = p->next) {
+        if (p->data.TrangThai == 0) {
+            int SoNgayMuon = SoNgay(p->data.NgayMuon, NgayHienTai);
+            if (SoNgayMuon > HAN_MUON_NGAY) SoNgayQuaHan += (SoNgayMuon - HAN_MUON_NGAY);
+        }
+    }
+    return SoNgayQuaHan;
+}
+
+void TGQuaHanGiamDan(DGQuaHan DG[], int n) {
+    for (int i = 0; i < n - 1; i++) {
+        int largest = i;
+        for (int j = i + 1; j < n; j++) {
+            if (DG[j].TongNgayQuaHan > DG[largest].TongNgayQuaHan) largest = j;
+        }
+        DGQuaHan tmp = DG[i];
+        DG[i] = DG[largest];
+        DG[largest] = tmp;
+    }
+}
+
+void NLR_TheDocGia(PTR_TheDocGia root, DGQuaHan DG[], int &pos) {
+    if (root == NULL) return;
+    int TongNgayQuaHan = ThoiGianMuon(root->data.mt);
+    if (TongNgayQuaHan > 0) {
+        DG[pos].docgia = root;
+        DG[pos].TongNgayQuaHan = TongNgayQuaHan;
+        pos++;
+    }
+    NLR_TheDocGia(root->left, DG, pos);
+    NLR_TheDocGia(root->right, DG, pos);
+}
+
+// [CAU I]: DANH SACH DOC GIA MUON SACH QUA HAN (GIAM DAN)
+void INDS_QuaHan(PTR_TheDocGia &root) {
     MangDong<QuaHanRecord> arr;
     DuyetQuaHan(root, arr, LayNgayHienTai());
     stable_sort(arr.begin(), arr.end(), [](const QuaHanRecord& a, const QuaHanRecord& b) {
@@ -1492,61 +1757,94 @@ void viewQuaHan(PTR_TheDocGia root) {
     viewBang("DANH SACH DOC GIA MUON SACH QUA HAN (GIAM DAN)", "", colW, 6, hd, rows);
 }
 
-void viewTop10(DS_DauSach& DS) {
-    MangDong<DauSach*> arr(DS.ds, DS.ds + DS.n);
-    stable_sort(arr.begin(), arr.end(), [](const DauSach* a, const DauSach* b) {
-        return a->SoLuotMuon > b->SoLuotMuon;
+void NLR_DemLuotMuon(PTR_TheDocGia root, string MaSach, int &cnt) {
+    if (root == NULL) return;
+    for (PTR_MuonTra p = root->data.mt; p != NULL; p = p->next) {
+        if (p->data.MaSach == MaSach) cnt++;
+    }
+    NLR_DemLuotMuon(root->left, MaSach, cnt);
+    NLR_DemLuotMuon(root->right, MaSach, cnt);
+}
+
+struct DS_Muon {
+    DauSach *ds;
+    int TongLanMuon = 0;
+};
+
+int DemTongLanMuon(DauSach* ds, PTR_TheDocGia root) {
+    int TongCnt = 0;
+    for (PTR_DanhMucSach p = ds->dms; p != NULL; p = p->next) {
+        int Cnt = 0;
+        NLR_DemLuotMuon(root, p->data.MaSach, Cnt);
+        TongCnt += Cnt;
+    }
+    return TongCnt;
+}
+
+// [CAU J]: TOP SACH CO LUOT MUON NHIEU NHAT (xep theo SoLuotMuon cua dau sach)
+void TopSach(DS_DauSach *DS, int soluong, PTR_TheDocGia root) {
+    (void)root;
+    MangDong<DS_Muon> DSM;
+    for (int i = 0; i < DS->n; i++) {
+        DS_Muon m;
+        m.ds = DS->ds[i];
+        m.TongLanMuon = DS->ds[i]->SoLuotMuon;
+        DSM.push_back(m);
+    }
+    stable_sort(DSM.begin(), DSM.end(), [](const DS_Muon& a, const DS_Muon& b) {
+        return a.TongLanMuon > b.TongLanMuon;
     });
 
     MangDong<Row> rows;
-    int top = min((int)arr.size(), 10);
+    int top = min((int)DSM.size(), soluong);
     for (int i = 0; i < top; ++i) {
         Row r;
         r.push_back(to_string(i + 1));
-        r.push_back(arr[i]->ISBN);
-        r.push_back(arr[i]->TenSach);
-        r.push_back(arr[i]->TheLoai);
-        r.push_back(to_string(arr[i]->SoLuotMuon));
+        r.push_back(DSM[i].ds->ISBN);
+        r.push_back(DSM[i].ds->TenSach);
+        r.push_back(DSM[i].ds->TheLoai);
+        r.push_back(to_string(DSM[i].TongLanMuon));
         rows.push_back(r);
     }
     int colW[] = { 6, 15, 35, 18, 15 };
     const char* const hd[] = { "TOP", "ISBN", "TEN SACH", "THE LOAI", "LUOT MUON" };
-    viewBang("TOP 10 SACH CO LUOT MUON NHIEU NHAT", "", colW, 5, hd, rows);
+    string title = "TOP " + to_string(soluong) + " SACH CO LUOT MUON NHIEU NHAT";
+    viewBang(title.c_str(), "", colW, 5, hd, rows);
 }
 
 // ===================== DU LIEU KHOI TAO MAU =====================
 void KhoiTaoDuLieuMau(DS_DauSach& DS, PTR_TheDocGia& root) {
-    DauSach* ds1 = new DauSach();
-    strcpy(ds1->ISBN, "INT1358");
-    strcpy(ds1->TenSach, "Cau Truc Du Lieu & Giai Thuat");
-    ds1->SoTrang = 380; strcpy(ds1->TacGia, "Nguyen Van A");
-    ds1->NamXuatBan = 2026; strcpy(ds1->TheLoai, "Giao trinh");
-    ds1->SoLuotMuon = 15;
-    ThemSachChoDauSach(ds1, 4, "Ke A1-01");
-    ChenDauSachCoThuTu(DS, ds1);
+    DauSach ds1 = DauSach();
+    ds1.ISBN = "INT1358";
+    ds1.TenSach = "Cau Truc Du Lieu & Giai Thuat";
+    ds1.SoTrang = 380; ds1.TacGia = "Nguyen Van A";
+    ds1.NamXuatBan = 2026; ds1.TheLoai = "Giao trinh";
+    ds1.SoLuotMuon = 15;
+    ThemSachChoDauSach(&ds1, 4, "Ke A1-01");
+    ThemDauSach(&DS, ds1);
 
-    DauSach* ds2 = new DauSach();
-    strcpy(ds2->ISBN, "INT1306");
-    strcpy(ds2->TenSach, "Lap Trinh Huong Doi Tuong");
-    ds2->SoTrang = 420; strcpy(ds2->TacGia, "Tran Van B");
-    ds2->NamXuatBan = 2026; strcpy(ds2->TheLoai, "Giao trinh");
-    ds2->SoLuotMuon = 22;
-    ThemSachChoDauSach(ds2, 3, "Ke A1-02");
-    ChenDauSachCoThuTu(DS, ds2);
+    DauSach ds2 = DauSach();
+    ds2.ISBN = "INT1306";
+    ds2.TenSach = "Lap Trinh Huong Doi Tuong";
+    ds2.SoTrang = 420; ds2.TacGia = "Tran Van B";
+    ds2.NamXuatBan = 2026; ds2.TheLoai = "Giao trinh";
+    ds2.SoLuotMuon = 22;
+    ThemSachChoDauSach(&ds2, 3, "Ke A1-02");
+    ThemDauSach(&DS, ds2);
 
-    DauSach* ds3 = new DauSach();
-    strcpy(ds3->ISBN, "KN001");
-    strcpy(ds3->TenSach, "Dac Nhan Tam");
-    ds3->SoTrang = 320; strcpy(ds3->TacGia, "Dale Carnegie");
-    ds3->NamXuatBan = 2024; strcpy(ds3->TheLoai, "Ky nang");
-    ds3->SoLuotMuon = 8;
-    ThemSachChoDauSach(ds3, 2, "Ke B2-05");
-    ChenDauSachCoThuTu(DS, ds3);
+    DauSach ds3 = DauSach();
+    ds3.ISBN = "KN001";
+    ds3.TenSach = "Dac Nhan Tam";
+    ds3.SoTrang = 320; ds3.TacGia = "Dale Carnegie";
+    ds3.NamXuatBan = 2024; ds3.TheLoai = "Ky nang";
+    ds3.SoLuotMuon = 8;
+    ThemSachChoDauSach(&ds3, 2, "Ke B2-05");
+    ThemDauSach(&DS, ds3);
 
-    TheDocGia dg1; dg1.MaThe = 10431; strcpy(dg1.Ho, "Nguyen Van"); strcpy(dg1.Ten, "An"); strcpy(dg1.Phai, "Nam"); dg1.TrangThai = 1;
+    TheDocGia dg1(10431, "Nguyen Van", "An", "Nam", 1, nullptr);
     InsertDocGia(root, dg1);
 
-    TheDocGia dg2; dg2.MaThe = 10442; strcpy(dg2.Ho, "Le Thi"); strcpy(dg2.Ten, "Binh"); strcpy(dg2.Phai, "Nu"); dg2.TrangThai = 1;
+    TheDocGia dg2(10442, "Le Thi", "Binh", "Nu", 1, nullptr);
     InsertDocGia(root, dg2);
 }
 
@@ -1556,9 +1854,12 @@ int main() {
     srand(static_cast<unsigned int>(time(nullptr)));
 
     DS_DauSach DS;
-    PTR_TheDocGia root = nullptr;
+    PTR_TheDocGia root = NULL;
+    PTR_DanhMucSach DMS = NULL;
+    PTR_MuonTra MT = NULL;
+    (void)DMS; (void)MT;
 
-    LoadDauSach(DS);
+    ReadDauSach(&DS);
     LoadTheDocGia(root);
 
     if (DS.n == 0 && root == nullptr) {
@@ -1621,8 +1922,8 @@ int main() {
                 case 0: viewDauSach(DS); veLaiMenuChinh(); break;
                 case 1: viewTheDocGia(root); veLaiMenuChinh(); break;
                 case 2: viewMuonTra(root, DS); veLaiMenuChinh(); break;
-                case 3: viewQuaHan(root); veLaiMenuChinh(); break;
-                case 4: viewTop10(DS); veLaiMenuChinh(); break;
+                case 3: INDS_QuaHan(root); veLaiMenuChinh(); break;
+                case 4: TopSach(&DS, 10, root); veLaiMenuChinh(); break;
                 case 5: {
                     bool ok1 = SaveDauSach(DS);
                     bool ok2 = SaveTheDocGia(root);
